@@ -1,0 +1,23 @@
+TI SECRET FACTIONS — DEMO GRAFICA v0.2
+
+Questa versione riprende lo stile delle schermate fornite: blu notte, oro luminoso, sfondo spaziale, card e navigazione inferiore.
+
+COME PUBBLICARE GRATIS:
+1. Estrai il contenuto dello ZIP.
+2. Carica tutti i file (index.html, app.js, space-header.webp, icon.svg, manifest.webmanifest, sw.js) nella cartella principale di un repository GitHub pubblico.
+3. Vai su Settings > Pages > Deploy from a branch > main / (root).
+4. Apri l'indirizzo HTTPS assegnato da GitHub Pages.
+
+FUNZIONI DEMO:
+- Home e navigazione fra quattro sezioni
+- Creazione partita locale
+- Selezione di una fazione principale e due riserve
+- Salvataggio delle preferenze sul browser
+- Simulazione di conflitti con tre partecipanti fittizi
+- Rivelazione simulata
+
+LIMITI IMPORTANTI:
+- Non è multiplayer: codice invito e notifiche sono dimostrativi.
+- Le scelte sono conservate in localStorage, non su un server protetto.
+- Non usare questa demo per partite reali con più dispositivi.
+- L'immagine spaziale è un ritaglio dello screenshot fornito dall'utente, usato come riferimento grafico. Verifica i diritti prima di distribuirla pubblicamente.
