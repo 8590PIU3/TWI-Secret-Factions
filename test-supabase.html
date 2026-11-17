@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+  <title>TI Secret Factions - Test Supabase</title>
+</head>
+<body>
+  <h1>TI Secret Factions</h1>
+  <h2>Test collegamento Supabase</h2>
+
+  <p id="result">Test non ancora avviato.</p>
+
+  <button id="testButton">
+    Verifica collegamento
+  </button>
+
+  <script type="module">
+    import { createClient } from
+      'https://esm.sh/@supabase/supabase-js@2';
+
+    // Sostituiremo questi valori nel prossimo passaggio
+    const SUPABASE_URL = 'INSERISCI_PROJECT_URL';
+    const SUPABASE_KEY = 'INSERISCI_PUBLISHABLE_KEY';
+
+    const result = document.getElementById('result');
+    const button = document.getElementById('testButton');
+
+    button.addEventListener('click', async () => {
+      result.textContent = 'Collegamento in corso...';
+
+      try {
+        const supabase = createClient(
+          SUPABASE_URL,
+          SUPABASE_KEY
+        );
+
+        const { data, error } =
+          await supabase.auth.signInAnonymously();
+
+        if (error) {
+          throw error;
+        }
+
+        result.textContent =
+          'Accesso anonimo riuscito! ID giocatore: ' +
+          data.user.id;
+
+      } catch (error) {
+        result.textContent =
+          'Errore: ' + error.message;
+      }
+    });
+  </script>
+</body>
+</html>
+
