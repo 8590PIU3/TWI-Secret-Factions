@@ -131,6 +131,95 @@
 </script>
 
   
+<hr>
+
+<h2>Entra in una partita</h2>
+
+<input
+  id="inviteCode"
+  placeholder="Codice invito"
+  maxlength="8"
+>
+
+<input
+  id="playerName"
+  placeholder="Nome giocatore"
+  value="Giocatore 2"
+>
+
+<button id="joinGameButton">
+  Entra nella partita
+</button>
+
+<p id="joinResult"></p>
+
+<script type="module">
+  import { createClient } from
+    'https://esm.sh/@supabase/supabase-js@2';
+
+  const supabase = createClient(
+    'https://hzwgpjtlvvjdryoiwbcf.supabase.co',
+    'sb_publishable_64zz7c3qQsFv3eUiKmiPvg_QiaLwEt6'
+  );
+
+  document.getElementById('joinGameButton')
+    .addEventListener('click', async () => {
+
+      const result =
+        document.getElementById('joinResult');
+
+      result.textContent = 'Ingresso in corso...';
+
+      try {
+        const { data: sessionData, error: sessionError } =
+          await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        if (!sessionData.session) {
+          const { error: authError } =
+            await supabase.auth.signInAnonymously();
+
+          if (authError) throw authError;
+        }
+
+        const code = document
+          .getElementById('inviteCode')
+          .value.trim().toUpperCase();
+
+        const name = document
+          .getElementById('playerName')
+          .value.trim();
+
+        const { data, error } =
+          await supabase.rpc('join_game', {
+            p_invite_code: code,
+            p_player_name: name
+          });
+
+        if (error) throw error;
+
+        const game = data?.[0];
+
+        if (!game) {
+          throw new Error(
+            'Nessuna partita restituita'
+          );
+        }
+
+        result.textContent =
+          'Ingresso riuscito! Partita: ' +
+          game.game_title;
+
+      } catch (error) {
+        result.textContent =
+          'Errore: ' + error.message;
+      }
+    });
+</script>
+
+
+  
 </body>
 </html>
 
