@@ -55,6 +55,82 @@
       }
     });
   </script>
+
+<hr>
+
+<h2>Crea una partita di prova</h2>
+
+<button id="createGameButton">
+  Crea partita di prova
+</button>
+
+<p id="gameResult"></p>
+
+<script type="module">
+  import { createClient } from
+    'https://esm.sh/@supabase/supabase-js@2';
+
+  const supabase = createClient(
+    'https://hzwgpjtlvvjdryoiwbcf.supabase.co',
+    'INCOLLA_QUI_LA_TUA_PUBLISHABLE_KEY'
+  );
+
+  const button =
+    document.getElementById('createGameButton');
+
+  const result =
+    document.getElementById('gameResult');
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    result.textContent = 'Creazione in corso...';
+
+    try {
+      const { data: sessionData } =
+        await supabase.auth.getSession();
+
+      if (!sessionData.session) {
+        const { error: signInError } =
+          await supabase.auth.signInAnonymously();
+
+        if (signInError) throw signInError;
+      }
+
+      const scheduledAt = new Date(
+        Date.now() + 72 * 60 * 60 * 1000
+      ).toISOString();
+
+      const { data, error } = await supabase.rpc(
+        'create_game',
+        {
+          p_title: 'Partita di prova',
+          p_scheduled_at: scheduledAt,
+          p_player_name: 'Giocatore Test'
+        }
+      );
+
+      if (error) throw error;
+
+      const game = data?.[0];
+
+      if (!game) {
+        throw new Error('Nessuna partita restituita');
+      }
+
+      result.textContent =
+        'Partita creata! Codice invito: ' +
+        game.invite_code;
+
+    } catch (error) {
+      result.textContent =
+        'Errore: ' + error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+</script>
+
+  
 </body>
 </html>
 
