@@ -317,6 +317,74 @@
     });
 </script>
 
+<hr>
+
+<h2>Verifica privacy delle fazioni</h2>
+
+<button id="checkPrivacyButton">
+  Controlla le mie scelte
+</button>
+
+<pre id="privacyResult"></pre>
+
+<script type="module">
+  import { createClient } from
+    'https://esm.sh/@supabase/supabase-js@2';
+
+  const supabase = createClient(
+    'https://hzwgpjtlvvjdryoiwbcf.supabase.co',
+    'sb_publishable_64zz7c3qQsFv3eUiKmiPvg_QiaLwEt6'
+  );
+
+  document.getElementById('checkPrivacyButton')
+    .addEventListener('click', async () => {
+      const result =
+        document.getElementById('privacyResult');
+
+      result.textContent = 'Controllo in corso...';
+
+      try {
+        const { data: userData, error: userError } =
+          await supabase.auth.getUser();
+
+        if (userError) throw userError;
+
+        if (!userData.user) {
+          throw new Error('Giocatore non autenticato');
+        }
+
+        const { data, error } = await supabase
+          .from('faction_choices')
+          .select(
+            'user_id,primary_faction,' +
+            'backup_faction_1,backup_faction_2'
+          );
+
+        if (error) throw error;
+
+        const otherPlayers = data.filter(
+          row => row.user_id !== userData.user.id
+        );
+
+        if (otherPlayers.length > 0) {
+          result.textContent =
+            'ATTENZIONE: sono visibili scelte altrui!';
+          return;
+        }
+
+        result.textContent =
+          'Controllo superato!\n' +
+          'Scelte visibili: ' + data.length + '\n' +
+          'Scelte di altri giocatori: 0\n\n' +
+          JSON.stringify(data, null, 2);
+
+      } catch (error) {
+        result.textContent =
+          'Errore: ' + error.message;
+      }
+    });
+</script>
+
   
 </body>
 </html>
