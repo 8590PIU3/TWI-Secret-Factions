@@ -293,16 +293,15 @@
           throw new Error('Partita non trovata');
         }
 
-     const { error } = await supabase.rpc(
+    const { error } = await supabase.rpc(
   'confirm_factions',
   {
-    p_game_id: 'INCOLLA_QUI_UUID',
+    p_game_id: 'fd73aee5-7cb1-49cf-b2c3-96452a4dbe11',
     p_primary: 'hacan',
     p_backup_1: 'mentak',
     p_backup_2: 'jolnar'
   }
-
-        );
+);
 
         if (error) throw error;
 
