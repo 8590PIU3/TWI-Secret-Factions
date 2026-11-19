@@ -149,7 +149,86 @@ $('create-btn').onclick = async () => {
 
 
 
-$('join-btn').onclick=()=>{$('join-msg').textContent='Il codice sarà utilizzabile quando attiveremo il multiplayer online. Per ora puoi provare la partita demo.'};
+
+$('join-btn').onclick = async () => {
+  const button = $('join-btn');
+  const message = $('join-msg');
+
+  const playerName = $('join-name').value.trim();
+  const inviteCode = $('join-code').value.trim().toUpperCase();
+
+  if (!playerName || !inviteCode) {
+    message.textContent = 'Inserisci il tuo nome e il codice invito.';
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = 'Ingresso nella partita in corso...';
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!sessionData.session) {
+      const { error: signInError } =
+        await supabase.auth.signInAnonymously();
+
+      if (signInError) throw signInError;
+    }
+
+    const { data, error } = await supabase.rpc(
+      'join_game',
+      {
+        p_invite_code: inviteCode,
+        p_player_name: playerName
+      }
+    );
+
+    if (error) throw error;
+
+    const joined = Array.isArray(data) ? data[0] : data;
+
+    if (!joined?.game_id) {
+      throw new Error('Impossibile recuperare la partita.');
+    }
+
+    const scheduledAt = new Date(joined.scheduled_at);
+
+    const gameData = {
+      name: playerName,
+      game: joined.game_title,
+      game_id: joined.game_id,
+      invite_code: inviteCode,
+      date: [
+        scheduledAt.getFullYear(),
+        String(scheduledAt.getMonth() + 1).padStart(2, '0'),
+        String(scheduledAt.getDate()).padStart(2, '0')
+      ].join('-'),
+      time: [
+        String(scheduledAt.getHours()).padStart(2, '0'),
+        String(scheduledAt.getMinutes()).padStart(2, '0')
+      ].join(':'),
+      pok: true,
+      picks: null
+    };
+
+    localStorage.setItem('ti-demo', JSON.stringify(gameData));
+    Object.assign(stored, gameData);
+
+    update();
+    restoreOnlineGame();
+    go('matches');
+
+    message.textContent = '';
+  } catch (error) {
+    message.textContent = 'Errore: ' + error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+
 
 
 $('copy-code').onclick = async () => {
