@@ -249,7 +249,109 @@ $('copy-code').onclick = async () => {
 };
 
 
-$('save').onclick=()=>{const picks=[0,1,2].map(i=>$('pick'+i).value);if(!picks.every(Boolean)||new Set(picks).size!==3){$('message').textContent='Seleziona tre fazioni differenti.';return}const d={...JSON.parse(localStorage.getItem('ti-demo')||'{}'),name:$('name').value.trim()||'Tu',game:$('game').value,pok:$('pok').checked,picks};localStorage.setItem('ti-demo',JSON.stringify(d));Object.assign(stored,d);$('message').textContent='Preferenze salvate su questo dispositivo.';assigned=null;$('result').textContent='';$('reveal').disabled=true;$('revealResult').replaceChildren();update();go('home')};
+
+$('save').onclick = async () => {
+  const button = $('save');
+  const message = $('message');
+
+  const picks = [0, 1, 2].map(i => $('pick' + i).value);
+
+  if (!picks.every(Boolean) || new Set(picks).size !== 3) {
+    message.textContent = 'Seleziona tre fazioni differenti.';
+    return;
+  }
+
+  const gameData = JSON.parse(
+    localStorage.getItem('ti-demo') || '{}'
+  );
+
+  if (!gameData.game_id) {
+    message.textContent =
+      'Devi prima creare una partita o entrare con un codice invito.';
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = 'Salvataggio delle preferenze in corso...';
+
+  try {
+    const { data: sessionData, error: sessionError } =
+      await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!sessionData.session) {
+      throw new Error(
+        'Sessione scaduta. Rientra nella partita prima di confermare.'
+      );
+    }
+
+    const factionIds = {
+      'The Arborec': 'arborec',
+      'The Barony of Letnev': 'letnev',
+      'The Clan of Saar': 'saar',
+      'The Embers of Muaat': 'muaat',
+      'The Emirates of Hacan': 'hacan',
+      'The Federation of Sol': 'sol',
+      'The Ghosts of Creuss': 'ghosts',
+      'The L1Z1X Mindnet': 'l1z1x',
+      'The Mentak Coalition': 'mentak',
+      'The Naalu Collective': 'naalu',
+      'The Nekro Virus': 'nekro',
+      'Sardakk N’orr': 'sardakk',
+      'The Universities of Jol-Nar': 'jolnar',
+      'The Winnu': 'winnu',
+      'The Xxcha Kingdom': 'xxcha',
+      'The Yin Brotherhood': 'yin',
+      'The Yssaril Tribes': 'yssaril',
+      'The Argent Flight': 'argent',
+      'The Empyrean': 'empyrean',
+      'The Mahact Gene-Sorcerers': 'mahact',
+      'The Naaz-Rokha Alliance': 'naazrokha',
+      'The Nomad': 'nomad',
+      'The Titans of Ul': 'titans',
+      'The Vuil’Raith Cabal': 'vuilraith',
+      'The Crimson Rebellion': 'crimson',
+      'The Deepwrought Scholarate': 'deepwrought',
+      'The Firmament / The Obsidian': 'firmament',
+      'Last Bastion': 'lastbastion',
+      'The Ral Nel Consortium': 'ralnel',
+      'The Council Keleres': 'keleres'
+    };
+
+    const ids = picks.map(name => factionIds[name]);
+
+    if (ids.some(id => !id)) {
+      throw new Error('Una delle fazioni non è riconosciuta.');
+    }
+
+    const { error } = await supabase.rpc(
+      'confirm_factions',
+      {
+        p_game_id: gameData.game_id,
+        p_primary: ids[0],
+        p_backup_1: ids[1],
+        p_backup_2: ids[2]
+      }
+    );
+
+    if (error) throw error;
+
+    const updated = { ...gameData, picks };
+
+    localStorage.setItem('ti-demo', JSON.stringify(updated));
+    Object.assign(stored, updated);
+
+    message.textContent = 'Preferenze confermate online!';
+    update();
+
+  } catch (error) {
+    message.textContent = 'Errore: ' + error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+
 $('resolve').onclick=()=>{const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');if(!d.picks){$('result').textContent='Conferma prima le tue tre fazioni.';return}const people=[{name:'Marco',picks:['The Federation of Sol','The Emirates of Hacan','The Naalu Collective']},{name:'Anna',picks:['The Emirates of Hacan','The Universities of Jol-Nar','The Arborec']},{name:'Luca',picks:['The Naalu Collective','The Clan of Saar','The Ghosts of Creuss']},{name:d.name,picks:d.picks}];const used=new Set();for(const p of people){p.final=null;p.rank=-1}for(let rank=0;rank<3;rank++)for(const p of people){const f=p.picks[rank];if(!p.final&&f&&!used.has(f)){p.final=f;p.rank=rank;used.add(f)}}assigned=people;const me=people.at(-1);$('result').textContent=me.final?`Assegnazione privata: ${me.final} (${me.rank===0?'principale':me.rank===1?'prima riserva':'seconda riserva'}).`:'Tutte le tue preferenze sono occupate: devi scegliere nuovamente.';$('reveal').disabled=people.some(p=>!p.final);$('revealResult').replaceChildren()};
 $('reveal').onclick=()=>{if(!assigned)return;const box=$('revealResult');box.replaceChildren();for(const p of assigned){const item=document.createElement('div');item.className='item';item.textContent=`${p.name} — ${p.final}`;box.append(item)}};
 update();go('home');if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
