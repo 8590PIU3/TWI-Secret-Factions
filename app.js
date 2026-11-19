@@ -109,7 +109,26 @@ $('create-btn').onclick = async () => {
 
 
 $('join-btn').onclick=()=>{$('join-msg').textContent='Il codice sarà utilizzabile quando attiveremo il multiplayer online. Per ora puoi provare la partita demo.'};
-$('copy-code').onclick=()=>navigator.clipboard?.writeText('TI4827').then(()=>{$('copy-code').textContent='Copiato!'}).catch(()=>{$('copy-code').textContent='TI4827'});
+
+
+$('copy-code').onclick = async () => {
+  const button = $('copy-code');
+  const code = $('invite-code').textContent.trim();
+
+  if (!code || code === 'TI4827') {
+    button.textContent = 'Codice non disponibile';
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(code);
+    button.textContent = 'Copiato!';
+  } catch (error) {
+    button.textContent = 'Copia manualmente';
+  }
+};
+
+
 $('save').onclick=()=>{const picks=[0,1,2].map(i=>$('pick'+i).value);if(!picks.every(Boolean)||new Set(picks).size!==3){$('message').textContent='Seleziona tre fazioni differenti.';return}const d={...JSON.parse(localStorage.getItem('ti-demo')||'{}'),name:$('name').value.trim()||'Tu',game:$('game').value,pok:$('pok').checked,picks};localStorage.setItem('ti-demo',JSON.stringify(d));Object.assign(stored,d);$('message').textContent='Preferenze salvate su questo dispositivo.';assigned=null;$('result').textContent='';$('reveal').disabled=true;$('revealResult').replaceChildren();update();go('home')};
 $('resolve').onclick=()=>{const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');if(!d.picks){$('result').textContent='Conferma prima le tue tre fazioni.';return}const people=[{name:'Marco',picks:['The Federation of Sol','The Emirates of Hacan','The Naalu Collective']},{name:'Anna',picks:['The Emirates of Hacan','The Universities of Jol-Nar','The Arborec']},{name:'Luca',picks:['The Naalu Collective','The Clan of Saar','The Ghosts of Creuss']},{name:d.name,picks:d.picks}];const used=new Set();for(const p of people){p.final=null;p.rank=-1}for(let rank=0;rank<3;rank++)for(const p of people){const f=p.picks[rank];if(!p.final&&f&&!used.has(f)){p.final=f;p.rank=rank;used.add(f)}}assigned=people;const me=people.at(-1);$('result').textContent=me.final?`Assegnazione privata: ${me.final} (${me.rank===0?'principale':me.rank===1?'prima riserva':'seconda riserva'}).`:'Tutte le tue preferenze sono occupate: devi scegliere nuovamente.';$('reveal').disabled=people.some(p=>!p.final);$('revealResult').replaceChildren()};
 $('reveal').onclick=()=>{if(!assigned)return;const box=$('revealResult');box.replaceChildren();for(const p of assigned){const item=document.createElement('div');item.className='item';item.textContent=`${p.name} — ${p.final}`;box.append(item)}};
