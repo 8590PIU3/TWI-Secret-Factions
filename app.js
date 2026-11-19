@@ -33,6 +33,28 @@ function update(){const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');$('p
 
 
 
+function restoreOnlineGame() {
+  const saved = JSON.parse(
+    localStorage.getItem('ti-demo') || '{}'
+  );
+
+  if (!saved.game_id || !saved.invite_code) {
+    return;
+  }
+
+  $('invite-code').textContent = saved.invite_code;
+  $('match-name').textContent =
+    saved.game || 'Partita online';
+
+  $('match-info').textContent =
+    `${saved.date || ''} · ${saved.time || ''} · Partita online`;
+}
+
+restoreOnlineGame();
+
+
+
+
 
 $('create-btn').onclick = async () => {
   const button = $('create-btn');
