@@ -1,1 +1,45 @@
-const CACHE='ti-secret-demo-v1';const ASSETS=['./','./index.html','./app.js','./manifest.webmanifest','./icon.svg'];self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS))));self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{if(e.request.method==='GET'&&new URL(e.request.url).origin===self.location.origin)e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))});
+
+const CACHE = 'ti-secret-factions-v2';
+
+const ASSETS = [
+  './',
+  './index.html',
+  './app.js',
+  './manifest.webmanifest',
+  './icon.svg'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys()
+      .then(names => Promise.all(
+        names
+          .filter(name => name.startsWith('ti-secret-') && name !== CACHE)
+          .map(name => caches.delete(name))
+      ))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+
+  if (
+    request.method !== 'GET' ||
+    new URL(request.url).origin !== self.location.origin
+  ) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(request).catch(() => caches.match(request))
+  );
+});
