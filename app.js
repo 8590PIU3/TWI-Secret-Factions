@@ -468,10 +468,36 @@ const { data: revealed, error: revealError } =
 
 if (revealError) throw revealError;
 
-console.log('Risultato rivelazione:', revealed);
 
-resultElement.textContent =
-  'La rivelazione è disponibile. Preparazione del risultato...';
+resultElement.replaceChildren();
+
+if (!revealed || revealed.length === 0) {
+  resultElement.textContent =
+    'Nessuna assegnazione disponibile.';
+  return;
+}
+
+const heading = document.createElement('h3');
+heading.textContent = 'Fazioni rivelate';
+resultElement.appendChild(heading);
+
+const list = document.createElement('ul');
+
+for (const player of revealed) {
+  const item = document.createElement('li');
+
+  const playerName = player.player_name || 'Giocatore';
+  const factionId = player.faction_id;
+
+  item.textContent = factionId
+    ? `${playerName}: ${factionId}`
+    : `${playerName}: fazione non assegnata`;
+
+  list.appendChild(item);
+}
+
+resultElement.appendChild(list);
+
 
 
   } catch (error) {
