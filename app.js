@@ -24,7 +24,7 @@ for(const key of ['name','game','date','time'])if(stored[key])$(key).value=store
 function go(screen){for(const s of ['home','create','join','matches','pick','notifications'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join'].includes(screen)?'home':screen)));const headings={home:['GAME ROOM',stored.game||'Alpha Quadrant','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);if(screen==='matches'){
   loadGameStatus();
   loadPlayerCount();
-}}
+}
 document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.go)));
 function options(){
 const available = $('pok').checked
