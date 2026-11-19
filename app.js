@@ -21,7 +21,10 @@ const thunder = [
 
 const $=id=>document.getElementById(id);let assigned=null;const stored=JSON.parse(localStorage.getItem('ti-demo')||'{}');
 for(const key of ['name','game','date','time'])if(stored[key])$(key).value=stored[key];if(typeof stored.pok==='boolean')$('pok').checked=stored.pok;
-function go(screen){for(const s of ['home','create','join','matches','pick','notifications'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join'].includes(screen)?'home':screen)));const headings={home:['GAME ROOM',stored.game||'Alpha Quadrant','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);if(screen==='matches')loadGameStatus()}
+function go(screen){for(const s of ['home','create','join','matches','pick','notifications'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join'].includes(screen)?'home':screen)));const headings={home:['GAME ROOM',stored.game||'Alpha Quadrant','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);if(screen==='matches'){
+  loadGameStatus();
+  loadPlayerCount();
+}}
 document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.go)));
 function options(){
 const available = $('pok').checked
@@ -354,6 +357,40 @@ $('save').onclick = async () => {
 
 async function loadGameStatus() {
   const statusElement = $('game-status');
+
+  
+async function loadPlayerCount() {
+  const countElement = $('player-count');
+
+  if (!countElement) return;
+
+  const gameData = JSON.parse(
+    localStorage.getItem('ti-demo') || '{}'
+  );
+
+  if (!gameData.game_id) {
+    countElement.textContent = 'Nessuna partita selezionata';
+    return;
+  }
+
+  countElement.textContent = 'Caricamento...';
+
+  try {
+    const { data, error } = await supabase.rpc(
+      'get_game_player_count',
+      { p_game_id: gameData.game_id }
+    );
+
+    if (error) throw error;
+
+    countElement.textContent = String(data);
+
+  } catch (error) {
+    console.error('Errore conteggio giocatori:', error);
+    countElement.textContent = 'Non disponibile';
+  }
+}
+
 
   if (!statusElement) return;
 
