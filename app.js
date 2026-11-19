@@ -13,7 +13,101 @@ document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',(
 function options(){const available=$('pok').checked?[...base,...pok]:base;for(let i=0;i<3;i++){const el=$('pick'+i),old=el.value||stored.picks?.[i]||'';el.replaceChildren(new Option('Scegli una fazione',''),...available.map(f=>new Option(f,f)));el.value=available.includes(old)?old:'';}$('catalogue-count').textContent=available.length+' fazioni disponibili'}
 options();$('pok').addEventListener('change',options);
 function update(){const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');$('progress-number').textContent=d.picks?'1/1':'0/1';$('progress-desc').textContent=d.picks?'Le tue preferenze sono state confermate.':'Conferma le tue tre fazioni per prepararti alla partita.';$('match-date').textContent=d.date?`Partita: ${d.date} · ${d.time||'19:00'}`:'Nessuna data impostata';$('my-faction').textContent=d.picks?.[0]||'Ancora segreta';$('faction-state').textContent=d.picks?'Preferenza principale salvata su questo dispositivo.':'Non hai ancora confermato le tue preferenze.';$('match-name').textContent=d.game||'Alpha Quadrant';$('match-info').textContent=d.date?`${d.date} · ${d.time||'19:00'} · ${d.pok?'Base + Prophecy of Kings':'Solo base'}`:'Partita dimostrativa';}
-$('create-btn').onclick=()=>{const d={name:$('name').value.trim()||'Giocatore',game:$('game').value.trim()||'Alpha Quadrant',date:$('date').value,time:$('time').value,pok:$('pok').checked,picks:stored.picks||null};localStorage.setItem('ti-demo',JSON.stringify(d));Object.assign(stored,d);update();go('matches')};
+
+
+
+
+$('create-btn').onclick = async () => {
+  const button = $('create-btn');
+  const message = $('create-msg');
+
+  const playerName = $('name').value.trim();
+  const gameTitle = $('game').value.trim();
+  const date = $('date').value;
+  const time = $('time').value;
+
+  if (!playerName || !gameTitle || !date || !time) {
+    message.textContent = 'Compila tutti i campi.';
+    return;
+  }
+
+  const scheduledAt = new Date(`${date}T${time}`);
+
+  if (
+    Number.isNaN(scheduledAt.getTime()) ||
+    scheduledAt.getTime() <= Date.now() + 24 * 60 * 60 * 1000
+  ) {
+    message.textContent =
+      'La partita deve iniziare tra più di 24 ore.';
+    return;
+  }
+
+  button.disabled = true;
+  message.textContent = 'Creazione partita in corso...';
+
+  try {
+    let { data: { user }, error: authError } =
+      await supabase.auth.getUser();
+
+    if (!user) {
+      const result = await supabase.auth.signInAnonymously();
+      authError = result.error;
+      user = result.data.user;
+    }
+
+    if (authError || !user) {
+      throw authError || new Error('Accesso non riuscito.');
+    }
+
+    const { data, error } = await supabase.rpc(
+      'create_game',
+      {
+        p_title: gameTitle,
+        p_scheduled_at: scheduledAt.toISOString(),
+        p_player_name: playerName
+      }
+    );
+
+    if (error) throw error;
+
+    const created = Array.isArray(data) ? data[0] : data;
+
+    if (!created?.game_id || !created?.invite_code) {
+      throw new Error('Supabase non ha restituito il codice invito.');
+    }
+
+    const gameData = {
+      name: playerName,
+      game: gameTitle,
+      date,
+      time,
+      pok: $('pok').checked,
+      game_id: created.game_id,
+      invite_code: created.invite_code,
+      picks: null
+    };
+
+    localStorage.setItem('ti-demo', JSON.stringify(gameData));
+    Object.assign(stored, gameData);
+
+    $('invite-code').textContent = created.invite_code;
+    $('match-info').textContent =
+      `${date} · ${time} · Partita online`;
+    $('match-name').textContent = gameTitle;
+
+    update();
+    go('matches');
+
+    message.textContent = '';
+  } catch (error) {
+    message.textContent = 'Errore: ' + error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+
+
+
 $('join-btn').onclick=()=>{$('join-msg').textContent='Il codice sarà utilizzabile quando attiveremo il multiplayer online. Per ora puoi provare la partita demo.'};
 $('copy-code').onclick=()=>navigator.clipboard?.writeText('TI4827').then(()=>{$('copy-code').textContent='Copiato!'}).catch(()=>{$('copy-code').textContent='TI4827'});
 $('save').onclick=()=>{const picks=[0,1,2].map(i=>$('pick'+i).value);if(!picks.every(Boolean)||new Set(picks).size!==3){$('message').textContent='Seleziona tre fazioni differenti.';return}const d={...JSON.parse(localStorage.getItem('ti-demo')||'{}'),name:$('name').value.trim()||'Tu',game:$('game').value,pok:$('pok').checked,picks};localStorage.setItem('ti-demo',JSON.stringify(d));Object.assign(stored,d);$('message').textContent='Preferenze salvate su questo dispositivo.';assigned=null;$('result').textContent='';$('reveal').disabled=true;$('revealResult').replaceChildren();update();go('home')};
