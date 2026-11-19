@@ -25,6 +25,7 @@ function go(screen){for(const s of ['home','create','join','matches','pick','not
   loadGameStatus();
   loadPlayerCount();
 }
+}
 document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.go)));
 function options(){
 const available = $('pok').checked
