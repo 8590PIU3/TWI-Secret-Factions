@@ -431,6 +431,44 @@ async function loadPlayerCount() {
 
 
 
+async function loadRevealedFaction() {
+  const resultElement = $('revealResult');
+  if (!resultElement) return;
+
+  const gameData = JSON.parse(
+    localStorage.getItem('ti-demo') || '{}'
+  );
+
+  if (!gameData.game_id) {
+    resultElement.textContent = '';
+    return;
+  }
+
+  resultElement.textContent = '';
+
+  try {
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('status')
+      .eq('id', gameData.game_id)
+      .single();
+
+    if (gameError) throw gameError;
+
+    if (game.status !== 'revealed') {
+      return;
+    }
+
+    resultElement.textContent =
+      'La partita è stata rivelata. Caricamento della fazione...';
+
+  } catch (error) {
+    console.error('Errore verifica rivelazione:', error);
+    resultElement.textContent =
+      'Impossibile verificare la rivelazione.';
+  }
+}
+
 
 update();go('home');loadGameStatus();
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
