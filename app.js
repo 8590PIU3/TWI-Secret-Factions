@@ -1,3 +1,9 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://hzwgpjtlvvjdryoiwbcf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_64zz7c3qQsFv3eUiKmiPvg_QiaLwEt6';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const base=['The Arborec','The Barony of Letnev','The Clan of Saar','The Embers of Muaat','The Emirates of Hacan','The Federation of Sol','The Ghosts of Creuss','The L1Z1X Mindnet','The Mentak Coalition','The Naalu Collective','The Nekro Virus',"Sardakk N’orr",'The Universities of Jol-Nar','The Winnu','The Xxcha Kingdom','The Yin Brotherhood','The Yssaril Tribes'];
 const pok=['The Argent Flight','The Empyrean','The Mahact Gene-Sorcerers','The Naaz-Rokha Alliance','The Nomad','The Titans of Ul',"The Vuil’Raith Cabal"];
 const $=id=>document.getElementById(id);let assigned=null;const stored=JSON.parse(localStorage.getItem('ti-demo')||'{}');
