@@ -352,5 +352,46 @@ $('save').onclick = async () => {
   }
 };
 
+async function loadGameStatus() {
+  const statusElement = $('game-status');
 
-update();go('home');if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+  if (!statusElement) return;
+
+  const gameData = JSON.parse(
+    localStorage.getItem('ti-demo') || '{}'
+  );
+
+  if (!gameData.game_id) {
+    statusElement.textContent = 'Nessuna partita online selezionata';
+    return;
+  }
+
+  statusElement.textContent = 'Caricamento...';
+
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select('status')
+      .eq('id', gameData.game_id)
+      .single();
+
+    if (error) throw error;
+
+    const labels = {
+      open: 'Aperta — preferenze in raccolta',
+      locked: 'Chiusa — assegnazione effettuata',
+      revealed: 'Rivelata — fazioni pubblicate'
+    };
+
+    statusElement.textContent =
+      labels[data.status] || 'Stato sconosciuto';
+
+  } catch (error) {
+    console.error('Errore caricamento partita:', error);
+    statusElement.textContent = 'Stato non disponibile';
+  }
+}
+
+
+update();go('home');loadGameStatus();
+if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
