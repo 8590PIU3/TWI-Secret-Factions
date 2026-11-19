@@ -385,6 +385,52 @@
     });
 </script>
 
+<section style="margin: 20px 0; padding: 15px; border: 1px solid #888;">
+  <h2>Test rivelazione fazioni</h2>
+
+  <button id="show-revealed">
+    Mostra fazioni rivelate
+  </button>
+
+  <pre id="revealed-result"></pre>
+</section>
+
+<script type="module">
+  import { createClient } from
+    'https://esm.sh/@supabase/supabase-js@2';
+
+  const supabase = createClient(
+    'https://hzwgpjtlvvjdryoiwbcf.supabase.co',
+    'INCOLLA_QUI_LA_TUA_CHIAVE_PUBLISHABLE'
+  );
+
+  document.getElementById('show-revealed')
+    .addEventListener('click', async () => {
+
+      const output =
+        document.getElementById('revealed-result');
+
+      output.textContent = 'Caricamento...';
+
+      const { data, error } = await supabase.rpc(
+        'get_revealed_factions',
+        {
+          p_game_id:
+            'fd73aee5-7cb1-49cf-b2c3-96452a4dbe11'
+        }
+      );
+
+      if (error) {
+        output.textContent =
+          'Errore: ' + error.message;
+        return;
+      }
+
+      output.textContent =
+        JSON.stringify(data, null, 2);
+    });
+</script>
+
   
 </body>
 </html>
