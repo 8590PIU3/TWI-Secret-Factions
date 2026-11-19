@@ -359,40 +359,6 @@ $('save').onclick = async () => {
 async function loadGameStatus() {
   const statusElement = $('game-status');
 
-  
-async function loadPlayerCount() {
-  const countElement = $('player-count');
-
-  if (!countElement) return;
-
-  const gameData = JSON.parse(
-    localStorage.getItem('ti-demo') || '{}'
-  );
-
-  if (!gameData.game_id) {
-    countElement.textContent = 'Nessuna partita selezionata';
-    return;
-  }
-
-  countElement.textContent = 'Caricamento...';
-
-  try {
-    const { data, error } = await supabase.rpc(
-      'get_game_player_count',
-      { p_game_id: gameData.game_id }
-    );
-
-    if (error) throw error;
-
-    countElement.textContent = String(data);
-
-  } catch (error) {
-    console.error('Errore conteggio giocatori:', error);
-    countElement.textContent = 'Non disponibile';
-  }
-}
-
-
   if (!statusElement) return;
 
   const gameData = JSON.parse(
@@ -429,6 +395,41 @@ async function loadPlayerCount() {
     statusElement.textContent = 'Stato non disponibile';
   }
 }
+
+
+async function loadPlayerCount() {
+  const countElement = $('player-count');
+
+  if (!countElement) return;
+
+  const gameData = JSON.parse(
+    localStorage.getItem('ti-demo') || '{}'
+  );
+
+  if (!gameData.game_id) {
+    countElement.textContent = 'Nessuna partita selezionata';
+    return;
+  }
+
+  countElement.textContent = 'Caricamento...';
+
+  try {
+    const { data, error } = await supabase.rpc(
+      'get_game_player_count',
+      { p_game_id: gameData.game_id }
+    );
+
+    if (error) throw error;
+
+    countElement.textContent = String(data);
+
+  } catch (error) {
+    console.error('Errore conteggio giocatori:', error);
+    countElement.textContent = 'Non disponibile';
+  }
+}
+
+
 
 
 update();go('home');loadGameStatus();
