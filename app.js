@@ -460,8 +460,19 @@ async function loadRevealedFaction() {
       return;
     }
 
-    resultElement.textContent =
-      'La partita è stata rivelata. Caricamento della fazione...';
+    
+const { data: revealed, error: revealError } =
+  await supabase.rpc('get_revealed_factions', {
+    p_game_id: gameData.game_id
+  });
+
+if (revealError) throw revealError;
+
+console.log('Risultato rivelazione:', revealed);
+
+resultElement.textContent =
+  'La rivelazione è disponibile. Preparazione del risultato...';
+
 
   } catch (error) {
     console.error('Errore verifica rivelazione:', error);
