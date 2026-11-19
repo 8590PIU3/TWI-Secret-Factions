@@ -6,6 +6,19 @@ const SUPABASE_KEY = 'sb_publishable_64zz7c3qQsFv3eUiKmiPvg_QiaLwEt6';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const base=['The Arborec','The Barony of Letnev','The Clan of Saar','The Embers of Muaat','The Emirates of Hacan','The Federation of Sol','The Ghosts of Creuss','The L1Z1X Mindnet','The Mentak Coalition','The Naalu Collective','The Nekro Virus',"Sardakk N’orr",'The Universities of Jol-Nar','The Winnu','The Xxcha Kingdom','The Yin Brotherhood','The Yssaril Tribes'];
 const pok=['The Argent Flight','The Empyrean','The Mahact Gene-Sorcerers','The Naaz-Rokha Alliance','The Nomad','The Titans of Ul',"The Vuil’Raith Cabal"];
+
+
+const thunder = [
+  'The Crimson Rebellion',
+  'The Deepwrought Scholarate',
+  'The Firmament / The Obsidian',
+  'Last Bastion',
+  'The Ral Nel Consortium',
+  'The Council Keleres'
+];
+
+
+
 const $=id=>document.getElementById(id);let assigned=null;const stored=JSON.parse(localStorage.getItem('ti-demo')||'{}');
 for(const key of ['name','game','date','time'])if(stored[key])$(key).value=stored[key];if(typeof stored.pok==='boolean')$('pok').checked=stored.pok;
 function go(screen){for(const s of ['home','create','join','matches','pick','notifications'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join'].includes(screen)?'home':screen)));const headings={home:['GAME ROOM',stored.game||'Alpha Quadrant','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0)}
