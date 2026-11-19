@@ -352,6 +352,5 @@ $('save').onclick = async () => {
   }
 };
 
-$('resolve').onclick=()=>{const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');if(!d.picks){$('result').textContent='Conferma prima le tue tre fazioni.';return}const people=[{name:'Marco',picks:['The Federation of Sol','The Emirates of Hacan','The Naalu Collective']},{name:'Anna',picks:['The Emirates of Hacan','The Universities of Jol-Nar','The Arborec']},{name:'Luca',picks:['The Naalu Collective','The Clan of Saar','The Ghosts of Creuss']},{name:d.name,picks:d.picks}];const used=new Set();for(const p of people){p.final=null;p.rank=-1}for(let rank=0;rank<3;rank++)for(const p of people){const f=p.picks[rank];if(!p.final&&f&&!used.has(f)){p.final=f;p.rank=rank;used.add(f)}}assigned=people;const me=people.at(-1);$('result').textContent=me.final?`Assegnazione privata: ${me.final} (${me.rank===0?'principale':me.rank===1?'prima riserva':'seconda riserva'}).`:'Tutte le tue preferenze sono occupate: devi scegliere nuovamente.';$('reveal').disabled=people.some(p=>!p.final);$('revealResult').replaceChildren()};
-$('reveal').onclick=()=>{if(!assigned)return;const box=$('revealResult');box.replaceChildren();for(const p of assigned){const item=document.createElement('div');item.className='item';item.textContent=`${p.name} — ${p.final}`;box.append(item)}};
+
 update();go('home');if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
