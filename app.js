@@ -28,6 +28,7 @@ if (screen === 'matches') {
   loadGameStatus();
   loadPlayerCount();
   loadRevealedFaction();
+  loadOrganizerGameHealth();
 }
 
 if (screen === 'home') {
@@ -588,6 +589,58 @@ resultElement.appendChild(list);
       'Impossibile verificare la rivelazione.';
   }
 }
+
+
+async function loadOrganizerGameHealth() {
+  const card = $('organizer-health-card');
+  const status = $('organizer-health-status');
+  if (!card || !status) return;
+
+  // Never retain an organizer panel when switching games.
+  card.classList.add('hidden');
+  const selected = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+  if (!selected.game_id) return;
+
+  try {
+    const { data, error } = await supabase.rpc(
+      'get_organizer_game_health',
+      { p_game_id: selected.game_id }
+    );
+    if (error) {
+      // Expected for participants who are not organizers.
+      if (error.message?.includes('Accesso riservato')) return;
+      throw error;
+    }
+
+    const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+    if (current.game_id !== selected.game_id) return;
+
+    $('organizer-players').textContent = String(data.players);
+    $('organizer-confirmed').textContent = String(data.confirmed);
+    $('organizer-assigned').textContent = String(data.assigned_count);
+
+    if (data.assignment_overdue) {
+      status.textContent = 'Attenzione: assegnazione in ritardo';
+    } else if (data.reveal_overdue) {
+      status.textContent = 'Attenzione: rivelazione in ritardo';
+    } else if (data.status === 'revealed') {
+      status.textContent = 'Rivelazione completata';
+    } else if (data.status === 'locked') {
+      status.textContent = 'Assegnazione completata, in attesa della rivelazione';
+    } else {
+      status.textContent = 'Regolare, in attesa dell’assegnazione';
+    }
+    card.classList.remove('hidden');
+  } catch (error) {
+    console.error('Errore stato organizzatore:', error);
+    const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+    if (current.game_id !== selected.game_id) return;
+    status.textContent = 'Stato tecnico non disponibile';
+    card.classList.remove('hidden');
+  }
+}
+
+$('organizer-health-refresh')?.addEventListener('click', loadOrganizerGameHealth);
 
 
 update();go('home');loadGameStatus();
