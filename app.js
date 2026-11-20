@@ -829,4 +829,56 @@ $('notifications-refresh')?.addEventListener('click', loadGameNotifications);
 
 
 update();go('home');loadGameStatus();
-if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('./sw.js', {
+        updateViaCache: 'none'
+      });
+      const banner = $('app-update-banner');
+      const updateButton = $('app-update-button');
+      let waitingWorker = null;
+      let refreshing = false;
+
+      const showUpdate = () => {
+        if (!navigator.serviceWorker.controller || !registration.waiting) return;
+        waitingWorker = registration.waiting;
+        banner?.classList.remove('hidden');
+      };
+
+      updateButton?.addEventListener('click', () => {
+        if (!waitingWorker) return;
+        updateButton.disabled = true;
+        updateButton.textContent = 'Aggiornamento...';
+        waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+      });
+
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+
+      registration.addEventListener('updatefound', () => {
+        const installing = registration.installing;
+        installing?.addEventListener('statechange', () => {
+          if (installing.state === 'installed') showUpdate();
+        });
+      });
+      showUpdate();
+
+      // Recheck when the user returns to the app, and periodically while open.
+      const checkForUpdate = () => registration.update().catch(error =>
+        console.warn('Controllo aggiornamenti non riuscito:', error)
+      );
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) checkForUpdate();
+      });
+      window.addEventListener('focus', checkForUpdate);
+      window.setInterval(checkForUpdate, 60 * 60 * 1000);
+      checkForUpdate();
+    } catch (error) {
+      console.warn('Service worker non disponibile:', error);
+    }
+  });
+}
