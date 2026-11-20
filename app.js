@@ -34,7 +34,9 @@ const available = $('pok').checked
   : base;
 ;for(let i=0;i<3;i++){const el=$('pick'+i),old=el.value||stored.picks?.[i]||'';el.replaceChildren(new Option('Scegli una fazione',''),...available.map(f=>new Option(f,f)));el.value=available.includes(old)?old:'';}$('catalogue-count').textContent=available.length+' fazioni disponibili'}
 options();$('pok').addEventListener('change',options);
-function update(){const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');$('progress-number').textContent=d.picks?'1/1':'0/1';$('progress-desc').textContent=d.picks?'Le tue preferenze sono state confermate.':'Conferma le tue tre fazioni per prepararti alla partita.';$('match-date').textContent=d.date?`Partita: ${d.date} · ${d.time||'19:00'}`:'Nessuna data impostata';$('my-faction').textContent=d.picks?.[0]||'Ancora segreta';$('faction-state').textContent=d.picks?'Preferenza principale salvata su questo dispositivo.':'Non hai ancora confermato le tue preferenze.';$('match-name').textContent=d.game||'Alpha Quadrant';$('match-info').textContent=d.date?`${d.date} · ${d.time||'19:00'} · 
+function update(){const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');$('progress-number').textContent=d.picks?'1/1':'0/1';$('progress-desc').textContent=d.picks?'Le tue preferenze sono state confermate.':'Conferma le tue tre fazioni per prepararti alla partita.';$('match-date').textContent=d.date?`Partita: ${d.date} · ${d.time||'19:00'}`:'Nessuna data impostata';
+$('my-faction').textContent = 'Ancora segreta';
+$('faction-state').textContent=d.picks?'Preferenza principale salvata su questo dispositivo.':'Non hai ancora confermato le tue preferenze.';$('match-name').textContent=d.game||'Alpha Quadrant';$('match-info').textContent=d.date?`${d.date} · ${d.time||'19:00'} · 
 ${d.pok?'Base + Prophecy of Kings + Thunder\'s Edge':'Solo base + Thunder\'s Edge'}
 `:'Partita dimostrativa';
 $('invite-code').textContent = d.invite_code || 'Nessun codice disponibile';
