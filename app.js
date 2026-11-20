@@ -21,9 +21,10 @@ const thunder = [
 
 const $=id=>document.getElementById(id);let assigned=null;const stored=JSON.parse(localStorage.getItem('ti-demo')||'{}');
 for(const key of ['name','game','date','time'])if(stored[key])$(key).value=stored[key];if(typeof stored.pok==='boolean')$('pok').checked=stored.pok;
-function go(screen){for(const s of ['home','create','join','matches','pick','notifications'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join'].includes(screen)?'home':screen)));const headings={home:['GAME ROOM',stored.game_id?(stored.game||'Partita online'):'Nessuna partita selezionata','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);
+function go(screen){for(const s of ['home','create','join','matches','pick','notifications','account'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join','account'].includes(screen)?'home':screen)));const headings={account:['ACCOUNT','Il tuo account','Collega la tua email o accedi.'],home:['GAME ROOM',stored.game_id?(stored.game||'Partita online'):'Nessuna partita selezionata','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);
                     
 
+if (screen === 'account') refreshAccountStatus();
 if (screen === 'matches') {
   loadGameStatus();
   loadPlayerCount();
@@ -848,6 +849,58 @@ async function loadGameNotifications() {
 
 $('notifications-refresh')?.addEventListener('click', loadGameNotifications);
 
+
+const AUTH_REDIRECT = 'https://8590piu3.github.io/TWI-Secret-Factions/';
+async function refreshAccountStatus(){
+  const status=$('account-status');
+  try{
+    const {data:{user},error}=await supabase.auth.getUser();
+    if(error)throw error;
+    status.textContent=!user?'Nessun account attivo su questo browser.':user.email
+      ?'Email associata: '+user.email+(user.email_confirmed_at?' (verificata)':' (in attesa di verifica)')
+      :'Account anonimo attivo su questo browser. Puoi collegare la tua email senza perdere le partite.';
+    $('account-link').disabled=!user||Boolean(user.email);
+    $('account-login').disabled=Boolean(user&&(!user.email||user.is_anonymous));
+    if(user?.email)$('account-email').value=user.email;
+  }catch(e){status.textContent='Verifica non disponibile: '+e.message;}
+}
+$('account-link').addEventListener('click',async()=>{
+  const email=$('account-email').value.trim();
+  const msg=$('account-message');msg.textContent='';
+  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){msg.textContent='Inserisci un indirizzo email valido.';return;}
+  const button=$('account-link');button.disabled=true;
+  try{
+    const {data:{user},error:sessionError}=await supabase.auth.getUser();
+    if(sessionError||!user)throw new Error('Account non trovato: apri il browser originale.');
+    if(user.email)throw new Error('Questo account ha già un indirizzo email.');
+    const {error}=await supabase.auth.updateUser({email},{emailRedirectTo:AUTH_REDIRECT});
+    if(error)throw error;
+    msg.textContent='Controlla la tua email e apri il link di verifica. Mantieni aperto questo browser e non uscire dall’account.';
+    await refreshAccountStatus();
+  }catch(e){msg.textContent='Impossibile collegare l’email: '+e.message;}
+  finally{button.disabled=false;}
+});
+$('account-login').addEventListener('click',async()=>{
+  const email=$('account-email').value.trim();
+  const msg=$('account-message');msg.textContent='';
+  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){msg.textContent='Inserisci un indirizzo email valido.';return;}
+  const button=$('account-login');button.disabled=true;
+  try{
+    const {data:{user}}=await supabase.auth.getUser();
+    if(user?.is_anonymous||(!user?.email&&JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id)){
+      throw new Error('Questo browser contiene un account anonimo: collega prima l’email, non effettuare un nuovo accesso.');
+    }
+    const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:AUTH_REDIRECT,shouldCreateUser:false}});
+    if(error)throw error;
+    msg.textContent='Se l’indirizzo è già registrato, riceverai un link per accedere. Aprilo sul dispositivo da collegare.';
+  }catch(e){msg.textContent='Impossibile inviare il link: '+e.message;}
+  finally{button.disabled=false;}
+});
+supabase.auth.onAuthStateChange((event)=>{
+  if(event==='SIGNED_IN'||event==='USER_UPDATED'){
+    window.setTimeout(()=>{refreshAccountStatus();},0);
+  }
+});
 
 update();go('home');loadGameStatus();
 if ('serviceWorker' in navigator) {
