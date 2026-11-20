@@ -40,6 +40,10 @@ if (screen === 'home') {
   loadMyRevealedFaction();
 }
 
+if (screen === 'notifications') {
+  loadGameNotifications();
+}
+
 }
 document.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>go(el.dataset.go)));
 function options(){
@@ -720,6 +724,108 @@ async function loadOrganizerGameHealth() {
 }
 
 $('organizer-health-refresh')?.addEventListener('click', loadOrganizerGameHealth);
+
+
+function formatRomeDate(date) {
+  return new Intl.DateTimeFormat('it-IT', {
+    timeZone: 'Europe/Rome',
+    day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  }).format(date);
+}
+
+async function loadGameNotifications() {
+  const feed = $('notifications-feed');
+  const gameLabel = $('notifications-game');
+  if (!feed || !gameLabel) return;
+  const selected = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+  feed.replaceChildren();
+  if (!selected.game_id) {
+    gameLabel.textContent = 'Nessuna partita online selezionata';
+    feed.textContent = 'Crea una partita o entra con un codice invito per vedere gli aggiornamenti.';
+    return;
+  }
+  gameLabel.textContent = 'Caricamento partita...';
+  feed.textContent = 'Verifica aggiornamenti in corso...';
+
+  const stillSelected = () =>
+    JSON.parse(localStorage.getItem('ti-demo') || '{}').game_id === selected.game_id;
+
+  const addItem = (heading, detail) => {
+    const item = document.createElement('div');
+    item.className = 'item';
+    const strong = document.createElement('strong');
+    strong.textContent = heading;
+    const description = document.createElement('p');
+    description.className = 'note';
+    description.textContent = detail;
+    item.append(strong, description);
+    feed.appendChild(item);
+  };
+
+  try {
+    const [gameResponse, confirmationResponse] = await Promise.all([
+      supabase.from('games').select('title,status,scheduled_at')
+        .eq('id', selected.game_id).single(),
+      supabase.rpc('get_my_faction_confirmation', { p_game_id: selected.game_id })
+    ]);
+    if (gameResponse.error) throw gameResponse.error;
+    if (confirmationResponse.error) throw confirmationResponse.error;
+    if (!stillSelected()) return;
+
+    const game = gameResponse.data;
+    const start = new Date(game.scheduled_at);
+    if (Number.isNaN(start.getTime())) throw new Error('Data della partita non valida');
+    gameLabel.textContent = game.title || 'Partita online';
+    feed.replaceChildren();
+
+    addItem(
+      confirmationResponse.data ? 'Preferenze confermate' : 'Preferenze da confermare',
+      confirmationResponse.data
+        ? 'Le tue tre preferenze sono salvate online e non possono più essere modificate.'
+        : 'Non risultano ancora tre preferenze confermate per il tuo account.'
+    );
+    addItem(
+      game.status === 'open' ? 'Assegnazione programmata' : 'Fase di assegnazione',
+      game.status === 'open'
+        ? 'Prevista il ' + formatRomeDate(new Date(start.getTime() - 86400000)) + '.'
+        : 'La fase di raccolta delle preferenze è terminata.'
+    );
+    addItem(
+      game.status === 'revealed' ? 'Rivelazione completata' : 'Rivelazione programmata',
+      game.status === 'revealed'
+        ? 'Le fazioni sono state rivelate. Consulta la scheda Partite.'
+        : 'Prevista il ' + formatRomeDate(start) + '. Fino ad allora le fazioni restano segrete.'
+    );
+
+    // The health endpoint only authorizes the organizer; never show its
+    // technical alerts to other participants.
+    const healthResponse = await supabase.rpc('get_organizer_game_health', {
+      p_game_id: selected.game_id
+    });
+    if (!stillSelected()) return;
+    if (!healthResponse.error && healthResponse.data) {
+      const health = healthResponse.data;
+      if (health.assignment_overdue || health.reveal_overdue) {
+        addItem(
+          'Attenzione: ritardo automatico',
+          health.assignment_overdue
+            ? 'L’assegnazione non risulta completata entro il termine previsto.'
+            : 'La rivelazione non risulta completata entro il termine previsto.'
+        );
+      } else {
+        addItem('Controllo organizzatore', 'Nessun ritardo automatico rilevato.');
+      }
+    }
+  } catch (error) {
+    console.error('Errore notifiche partita:', error);
+    if (!stillSelected()) return;
+    gameLabel.textContent = 'Aggiornamenti non disponibili';
+    feed.textContent = 'Impossibile verificare gli aggiornamenti online. Riprova.';
+  }
+}
+
+$('notifications-refresh')?.addEventListener('click', loadGameNotifications);
 
 
 update();go('home');loadGameStatus();
