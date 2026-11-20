@@ -867,7 +867,7 @@ async function refreshAccountStatus(){
 $('account-link').addEventListener('click',async()=>{
   const email=$('account-email').value.trim();
   const msg=$('account-message');msg.textContent='';
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){msg.textContent='Inserisci un indirizzo email valido.';return;}
+  if(!email || !$('account-email').checkValidity()){msg.textContent='Controlla che l’indirizzo email sia completo e senza spazi.';return;}
   const button=$('account-link');button.disabled=true;
   try{
     const {data:{user},error:sessionError}=await supabase.auth.getUser();
@@ -883,7 +883,7 @@ $('account-link').addEventListener('click',async()=>{
 $('account-login').addEventListener('click',async()=>{
   const email=$('account-email').value.trim();
   const msg=$('account-message');msg.textContent='';
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){msg.textContent='Inserisci un indirizzo email valido.';return;}
+  if(!email || !$('account-email').checkValidity()){msg.textContent='Controlla che l’indirizzo email sia completo e senza spazi.';return;}
   const button=$('account-login');button.disabled=true;
   try{
     const {data:{user}}=await supabase.auth.getUser();
