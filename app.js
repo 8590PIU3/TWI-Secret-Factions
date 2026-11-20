@@ -21,7 +21,7 @@ const thunder = [
 
 const $=id=>document.getElementById(id);let assigned=null;const stored=JSON.parse(localStorage.getItem('ti-demo')||'{}');
 for(const key of ['name','game','date','time'])if(stored[key])$(key).value=stored[key];if(typeof stored.pok==='boolean')$('pok').checked=stored.pok;
-function go(screen){for(const s of ['home','create','join','matches','pick','notifications'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join'].includes(screen)?'home':screen)));const headings={home:['GAME ROOM',stored.game||'Alpha Quadrant','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);
+function go(screen){for(const s of ['home','create','join','matches','pick','notifications'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join'].includes(screen)?'home':screen)));const headings={home:['GAME ROOM',stored.game_id?(stored.game||'Partita online'):'Nessuna partita selezionata','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);
                     
 
 if (screen === 'matches') {
@@ -52,14 +52,34 @@ const available = $('pok').checked
   : base;
 ;for(let i=0;i<3;i++){const el=$('pick'+i),old=el.value||stored.picks?.[i]||'';el.replaceChildren(new Option('Scegli una fazione',''),...available.map(f=>new Option(f,f)));el.value=available.includes(old)?old:'';}$('catalogue-count').textContent=available.length+' fazioni disponibili'}
 options();$('pok').addEventListener('change',options);
-function update(){const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');$('progress-number').textContent=d.picks?'1/1':'0/1';$('progress-desc').textContent=d.picks?'Le tue preferenze sono state confermate.':'Conferma le tue tre fazioni per prepararti alla partita.';$('match-date').textContent=d.date?`Partita: ${d.date} · ${d.time||'19:00'}`:'Nessuna data impostata';
-$('my-faction').textContent = 'Ancora segreta';
-$('faction-state').textContent=d.picks?'Preferenza principale salvata su questo dispositivo.':'Non hai ancora confermato le tue preferenze.';$('match-name').textContent=d.game||'Alpha Quadrant';$('match-info').textContent=d.date?`${d.date} · ${d.time||'19:00'} · 
-${d.pok?'Base + Prophecy of Kings + Thunder\'s Edge':'Solo base + Thunder\'s Edge'}
-`:'Partita dimostrativa';
-$('invite-code').textContent = d.invite_code || 'Nessun codice disponibile';
+function update(){
+  const d=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  const online=Boolean(d.game_id);
+  $('progress-number').textContent=online&&d.picks?'1/1':'0/1';
+  $('progress-desc').textContent=online&&d.picks
+    ?'Le tue preferenze sono state confermate.'
+    :online?'Verifica le preferenze della partita online.':'Nessuna partita online selezionata.';
+  $('match-date').textContent=online&&d.date
+    ?`Partita: ${d.date} · ${d.time||'19:00'}`
+    :'Crea una partita o entra con un codice invito.';
+  $('my-faction').textContent='Ancora segreta';
+  $('faction-state').textContent=online
+    ?'La fazione sarà visibile dopo la rivelazione.'
+    :'Nessuna partita online selezionata.';
+  $('match-name').textContent=online?(d.game||'Partita online'):'Nessuna partita online selezionata';
+  $('match-info').textContent=online&&d.date
+    ?`${d.date} · ${d.time||'19:00'} · Partita online`
+    :'Crea una partita o entra con un codice invito.';
+  $('invite-code').textContent=online&&d.invite_code?d.invite_code:'Nessun codice disponibile';
+  $('copy-code').disabled=!(online&&d.invite_code);
+  $('match-pick-button').disabled=!online;
+  $('match-pick-button').textContent=online?'Seleziona le tue fazioni':'Entra prima in una partita';
+  if(!online){
+    $('save').disabled=true;
+    for(let i=0;i<3;i++)$('pick'+i).disabled=true;
+    $('message').textContent='Per confermare le preferenze, crea una partita o entra con un codice invito.';
+  }
 }
-
 
 
 function restoreOnlineGame() {
@@ -265,7 +285,7 @@ $('copy-code').onclick = async () => {
   const button = $('copy-code');
   const code = $('invite-code').textContent.trim();
 
-  if (!code || code === 'TI4827') {
+  if (!/^[A-Z0-9]{8}$/.test(code)) {
     button.textContent = 'Codice non disponibile';
     return;
   }
