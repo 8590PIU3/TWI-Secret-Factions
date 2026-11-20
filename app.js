@@ -477,6 +477,20 @@ if (!revealed || revealed.length === 0) {
   return;
 }
 
+const { data: factions, error: factionsError } =
+  await supabase
+    .from('factions')
+    .select('id, name');
+
+if (factionsError) throw factionsError;
+
+const factionNames = new Map(
+  (factions || []).map(faction => [
+    faction.id,
+    faction.name
+  ])
+);
+
 const heading = document.createElement('h3');
 heading.textContent = 'Fazioni rivelate';
 resultElement.appendChild(heading);
@@ -490,7 +504,7 @@ for (const player of revealed) {
   const factionId = player.faction_id;
 
   item.textContent = factionId
-    ? `${playerName}: ${factionId}`
+    ? `${playerName}: ${factionNames.get(factionId) || factionId}`
     : `${playerName}: fazione non assegnata`;
 
   list.appendChild(item);
