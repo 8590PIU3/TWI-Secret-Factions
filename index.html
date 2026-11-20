@@ -76,7 +76,14 @@
   Gli altri giocatori non potranno vederle.
 </p>
 <label>1 · Fazione principale<select id="pick0"></select></label><label>2 · Prima riserva<select id="pick1"></select></label><label>3 · Seconda riserva<select id="pick2"></select></label><button class="btn" id="save">Conferma le fazioni</button><p class="message" id="message"></p></div><div class="card"><div class="section-title">Catalogo</div><p class="note" id="catalogue-count">17 fazioni base + 13 fazioni aggiuntive</p></div></section>
-<section id="notifications" class="hidden"><div class="card"><div class="section-title">Notifiche</div><h2>La galassia ti aspetta</h2><div class="item"><strong>Benvenuto in TI Secret Factions</strong><p class="note">Crea una partita e conferma le tue preferenze. Le notifiche reali saranno disponibili dopo l'integrazione del server.</p></div><div class="item"><strong>🔒 Segretezza</strong><p class="note">Le preferenze sono locali in questa versione dimostrativa.</p></div></div></section>
+<section id="notifications" class="hidden"><div class="card">
+<div class="section-title">Notifiche della partita</div>
+<h2>La tua galassia, aggiornata</h2>
+<p class="note">Stato aggiornato da Supabase quando apri questa schermata. Le fazioni restano segrete fino alla rivelazione.</p>
+<p class="note" id="notifications-game">Caricamento...</p>
+<div id="notifications-feed" aria-live="polite"><div class="item">Caricamento aggiornamenti...</div></div>
+<button class="btn outline" id="notifications-refresh" type="button">Aggiorna notifiche</button>
+</div></section>
 </main><nav class="tabs" aria-label="Navigazione"><button class="tab active" data-go="home"><span class="ico">⌂</span>Home</button><button class="tab" data-go="matches"><span class="ico">♧</span>Partite</button><button class="tab" data-go="pick"><span class="ico">✧</span>Fazioni</button><button class="tab" data-go="notifications"><span class="ico">♧</span>Notifiche</button></nav></div><script type="module" src="app.js"></script></body></html>
 
 
