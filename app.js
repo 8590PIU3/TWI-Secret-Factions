@@ -217,6 +217,9 @@ $('join-btn').onclick = async () => {
       name: playerName,
       game: joined.game_title,
       game_id: joined.game_id,
+      
+player_id: joined.player_id,
+
       invite_code: inviteCode,
       date: [
         scheduledAt.getFullYear(),
