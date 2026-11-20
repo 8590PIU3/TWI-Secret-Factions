@@ -31,7 +31,7 @@ if (screen === 'matches') {
 }
 
 if (screen === 'home') {
-  loadRevealedFaction();
+  loadMyRevealedFaction();
 }
 
 }
@@ -446,6 +446,59 @@ async function loadPlayerCount() {
 }
 
 
+
+async function loadMyRevealedFaction() {
+  const factionElement = $('my-faction');
+  const stateElement = $('faction-state');
+  if (!factionElement || !stateElement) return;
+
+  const gameData = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+  if (!gameData.game_id) return;
+
+  try {
+    const { data: game, error: gameError } = await supabase
+      .from('games')
+      .select('status')
+      .eq('id', gameData.game_id)
+      .single();
+
+    if (gameError) throw gameError;
+    if (game.status !== 'revealed') return;
+
+    const { data: factionId, error: factionError } = await supabase.rpc(
+      'get_my_revealed_faction',
+      { p_game_id: gameData.game_id }
+    );
+    if (factionError) throw factionError;
+
+    // Do not display an unassigned faction as a confirmed assignment.
+    if (!factionId) {
+      factionElement.textContent = 'Non assegnata';
+      stateElement.textContent = 'Nessuna fazione assegnata disponibile.';
+      return;
+    }
+
+    const { data: faction, error: nameError } = await supabase
+      .from('factions')
+      .select('name')
+      .eq('id', factionId)
+      .single();
+    if (nameError) throw nameError;
+
+    // Ignore a delayed response if the selected game changed.
+    const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+    if (current.game_id !== gameData.game_id) return;
+
+    factionElement.textContent = faction.name;
+    stateElement.textContent = 'La tua fazione è stata rivelata ufficialmente.';
+  } catch (error) {
+    console.error('Errore caricamento fazione personale:', error);
+    const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+    if (current.game_id !== gameData.game_id) return;
+    factionElement.textContent = 'Non disponibile';
+    stateElement.textContent = 'Impossibile verificare la fazione rivelata.';
+  }
+}
 
 async function loadRevealedFaction() {
   const resultElement = $('revealResult');
