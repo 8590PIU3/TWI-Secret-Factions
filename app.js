@@ -29,6 +29,11 @@ if (screen === 'matches') {
   loadPlayerCount();
   loadRevealedFaction();
   loadOrganizerGameHealth();
+  loadMyConfirmationStatus();
+}
+
+if (screen === 'pick') {
+  loadMyConfirmationStatus();
 }
 
 if (screen === 'home') {
@@ -292,6 +297,11 @@ $('save').onclick = async () => {
     return;
   }
 
+  if (confirmedGameId === gameData.game_id) {
+    message.textContent = 'Preferenze già confermate: non modificabili.';
+    return;
+  }
+
   button.disabled = true;
   message.textContent = 'Salvataggio delle preferenze in corso...';
 
@@ -364,6 +374,8 @@ $('save').onclick = async () => {
     Object.assign(stored, updated);
 
     message.textContent = 'Preferenze confermate online!';
+    confirmedGameId = gameData.game_id;
+    renderConfirmationState(true);
     update();
 
   } catch (error) {
@@ -372,6 +384,54 @@ $('save').onclick = async () => {
     button.disabled = false;
   }
 };
+
+
+let confirmedGameId = null;
+
+function renderConfirmationState(confirmed) {
+  const button = $('match-pick-button');
+  const saveButton = $('save');
+  if (button) {
+    button.textContent = confirmed ? 'Preferenze già confermate' : 'Seleziona le tue fazioni';
+    button.disabled = confirmed;
+  }
+  if (saveButton) saveButton.disabled = confirmed;
+  for (let i = 0; i < 3; i++) {
+    const select = $('pick' + i);
+    if (select) select.disabled = confirmed;
+  }
+  if (confirmed) {
+    $('message').textContent = 'Preferenze già confermate online: non modificabili.';
+  }
+}
+
+async function loadMyConfirmationStatus() {
+  const gameData = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+  confirmedGameId = null;
+  renderConfirmationState(false);
+  if (!gameData.game_id) return;
+
+  const button = $('match-pick-button');
+  const saveButton = $('save');
+  if (button) button.disabled = true;
+  if (saveButton) saveButton.disabled = true;
+  try {
+    const { data, error } = await supabase.rpc('get_my_faction_confirmation', {
+      p_game_id: gameData.game_id
+    });
+    if (error) throw error;
+    const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+    if (current.game_id !== gameData.game_id) return;
+    confirmedGameId = data ? gameData.game_id : null;
+    renderConfirmationState(Boolean(data));
+  } catch (error) {
+    console.error('Errore verifica preferenze:', error);
+    const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
+    if (current.game_id !== gameData.game_id) return;
+    if (button) button.textContent = 'Verifica preferenze non disponibile';
+    $('message').textContent = 'Impossibile verificare le preferenze. Riprova più tardi.';
+  }
+}
 
 async function loadGameStatus() {
   const statusElement = $('game-status');
