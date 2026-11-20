@@ -695,7 +695,8 @@ async function loadOrganizerGameHealth() {
     if (!Number.isNaN(scheduledAt.getTime())) {
       $('organizer-assignment-date').textContent =
         italianDate(new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000));
-      $('organizer-reveal-date').textContent = italianDate(scheduledAt);
+      $('organizer-reveal-date').textContent =
+        italianDate(new Date(scheduledAt.getTime() - 12 * 60 * 60 * 1000));
     } else {
       $('organizer-assignment-date').textContent = 'Non disponibile';
       $('organizer-reveal-date').textContent = 'Non disponibile';
@@ -795,7 +796,7 @@ async function loadGameNotifications() {
       game.status === 'revealed' ? 'Rivelazione completata' : 'Rivelazione programmata',
       game.status === 'revealed'
         ? 'Le fazioni sono state rivelate. Consulta la scheda Partite.'
-        : 'Prevista il ' + formatRomeDate(start) + '. Fino ad allora le fazioni restano segrete.'
+        : 'Prevista il ' + formatRomeDate(new Date(start.getTime() - 43200000)) + '. Fino ad allora le fazioni restano segrete.'
     );
 
     // The health endpoint only authorizes the organizer; never show its
