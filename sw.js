@@ -1,5 +1,5 @@
 
-const CACHE = 'ti-secret-factions-v2';
+const CACHE = 'ti-secret-factions-v3';
 
 const ASSETS = [
   './',
@@ -13,7 +13,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE)
       .then(cache => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
+      
   );
 });
 
@@ -42,4 +42,10 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(request).catch(() => caches.match(request))
   );
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
