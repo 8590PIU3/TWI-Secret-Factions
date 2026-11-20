@@ -22,6 +22,15 @@
   per partecipare alla partita online.</p><p class="message" id="join-msg"></p></div></section>
 <section id="matches" class="hidden"><div class="card gold-border"><div class="section-title">Partita Online </div><h2 id="match-name">Alpha Quadrant</h2><p class="note" id="match-info">Configura la tua partita.</p><div class="row"><span class="gold" id="invite-code">TI4827</span><button class="btn small outline" id="copy-code">Copia codice</button></div><button class="btn" data-go="pick">Seleziona le tue fazioni</button></div>
 
+<div class="card hidden" id="organizer-health-card">
+  <div class="section-title">Controllo organizzatore</div>
+  <p class="note">Informazioni tecniche della partita, senza mostrare le fazioni segrete.</p>
+  <p class="note">Giocatori: <strong id="organizer-players">—</strong></p>
+  <p class="note">Preferenze confermate: <strong id="organizer-confirmed">—</strong></p>
+  <p class="note">Fazioni assegnate (solo numero): <strong id="organizer-assigned">—</strong></p>
+  <p class="note">Controllo automatico: <strong id="organizer-health-status">Caricamento...</strong></p>
+  <button class="btn outline" id="organizer-health-refresh" type="button">Aggiorna stato</button>
+</div>
 <div class="card">
   <div class="section-title">Assegnazione delle fazioni</div>
 
