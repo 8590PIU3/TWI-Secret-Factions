@@ -618,6 +618,25 @@ async function loadOrganizerGameHealth() {
     $('organizer-players').textContent = String(data.players);
     $('organizer-confirmed').textContent = String(data.confirmed);
     $('organizer-assigned').textContent = String(data.assigned_count);
+    // Use the authoritative scheduled_at from Supabase, not local demo fields.
+    const scheduledAt = new Date(data.scheduled_at);
+    const italianDate = value => new Intl.DateTimeFormat('it-IT', {
+      timeZone: 'Europe/Rome',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(value);
+    if (!Number.isNaN(scheduledAt.getTime())) {
+      $('organizer-assignment-date').textContent =
+        italianDate(new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000));
+      $('organizer-reveal-date').textContent = italianDate(scheduledAt);
+    } else {
+      $('organizer-assignment-date').textContent = 'Non disponibile';
+      $('organizer-reveal-date').textContent = 'Non disponibile';
+    }
+
 
     if (data.assignment_overdue) {
       status.textContent = 'Attenzione: assegnazione in ritardo';
