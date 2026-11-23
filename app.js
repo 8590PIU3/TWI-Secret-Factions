@@ -506,12 +506,13 @@ function renderOverviewCountdown(){
     }
     return;
   }
-  const minutes=Math.ceil(remaining/60000);
-  const days=Math.floor(minutes/1440);
-  const hours=Math.floor((minutes%1440)/60);
-  const mins=minutes%60;
+  const seconds=Math.max(0,Math.ceil(remaining/1000));
+  const days=Math.floor(seconds/86400);
+  const hours=Math.floor((seconds%86400)/3600);
+  const mins=Math.floor((seconds%3600)/60);
+  const secs=seconds%60;
   const label=overviewTimerStatus==='open'?'All’assegnazione':'Alla rivelazione';
-  el.textContent=label+': '+(days?days+' giorni, ':'')+hours+' ore e '+mins+' minuti';
+  el.textContent=label+': '+(days?days+' giorni, ':'')+hours+' ore, '+mins+' minuti e '+secs+' secondi';
 }
 let lastOverviewServerCheck=0;
 let overviewServerCheckRunning=false;
@@ -535,11 +536,11 @@ async function refreshVisibleMatchStatus(force=false){
   }
 }
 window.setInterval(()=>{
-  if(!$('matches').classList.contains('hidden')){
+  if(!$('matches').classList.contains('hidden')&&!document.hidden){
     renderOverviewCountdown();
     if(Date.now()-lastOverviewServerCheck>=5*60*1000)refreshVisibleMatchStatus();
   }
-},30000);
+},1000);
 document.addEventListener('visibilitychange',()=>{
   if(!document.hidden&&!$('matches').classList.contains('hidden')){
     renderOverviewCountdown();
@@ -561,12 +562,14 @@ async function loadMatchOverview(){
     $('overview-title').textContent='Nessuna partita selezionata';
     return;
   }
-  $('overview-title').textContent='Caricamento...';
-  $('overview-date').textContent='—';
-  $('overview-status').textContent='—';
-  $('overview-players').textContent='—';
-  $('overview-confirmed').textContent='Solo organizzatore';
-  $('overview-countdown').textContent='—';
+  if(overviewTimerGameId!==id){
+    $('overview-title').textContent='Caricamento...';
+    $('overview-date').textContent='—';
+    $('overview-status').textContent='—';
+    $('overview-players').textContent='—';
+    $('overview-confirmed').textContent='Solo organizzatore';
+    $('overview-countdown').textContent='—';
+  }
   try{
     const [{data:game,error:gameError},{data:count,error:countError}]=await Promise.all([
       supabase.from('games').select('title,scheduled_at,status').eq('id',id).single(),
