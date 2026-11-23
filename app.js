@@ -67,6 +67,7 @@ if (screen === 'matches') {
 }
 
 if (screen === 'pick') {
+  loadMyRevealedFaction();
   loadMyConfirmationStatus();
 }
 
@@ -97,6 +98,7 @@ function update(){
     ?`Partita: ${d.date} · ${d.time||'19:00'}`
     :'Crea una partita o entra con un codice invito.';
   $('my-faction').textContent='Ancora segreta';
+  if($('pick-my-faction'))$('pick-my-faction').textContent='Ancora segreta';
   $('faction-state').textContent=online
     ?'La fazione sarà visibile dopo la rivelazione.'
     :'Nessuna partita online selezionata.';
@@ -712,6 +714,9 @@ async function loadMyRevealedFaction() {
   const factionElement = $('my-faction');
   const stateElement = $('faction-state');
   if (!factionElement || !stateElement) return;
+  const pickFaction=$('pick-my-faction');
+  const pickState=$('pick-faction-state');
+  const setFaction=(value,message)=>{factionElement.textContent=value;stateElement.textContent=message;if(pickFaction)pickFaction.textContent=value;if(pickState)pickState.textContent=message;};
 
   const gameData = JSON.parse(localStorage.getItem('ti-demo') || '{}');
   if (!gameData.game_id) return;
@@ -734,8 +739,7 @@ async function loadMyRevealedFaction() {
 
     // Do not display an unassigned faction as a confirmed assignment.
     if (!factionId) {
-      factionElement.textContent = 'Non assegnata';
-      stateElement.textContent = 'Nessuna fazione assegnata disponibile.';
+      setFaction('Non assegnata','Nessuna fazione assegnata disponibile.');
       return;
     }
 
@@ -750,14 +754,13 @@ async function loadMyRevealedFaction() {
     const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
     if (current.game_id !== gameData.game_id) return;
 
-    factionElement.textContent = faction.name;
-    stateElement.textContent = 'La tua fazione è stata rivelata ufficialmente.';
+    setFaction(faction.name,'La tua fazione è stata rivelata ufficialmente.');
   } catch (error) {
     console.error('Errore caricamento fazione personale:', error);
     const current = JSON.parse(localStorage.getItem('ti-demo') || '{}');
     if (current.game_id !== gameData.game_id) return;
-    factionElement.textContent = 'Non disponibile';
-    stateElement.textContent = 'Impossibile verificare la fazione rivelata.';
+    if(error.message?.includes('non è ancora disponibile'))return;
+    setFaction('Non disponibile','Impossibile verificare la fazione rivelata.');
   }
 }
 
