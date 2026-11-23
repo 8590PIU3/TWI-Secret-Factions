@@ -21,7 +21,34 @@ const thunder = [
 
 const $=id=>document.getElementById(id);let assigned=null;const stored=JSON.parse(localStorage.getItem('ti-demo')||'{}');
 for(const key of ['name','game','date','time'])if(stored[key])$(key).value=stored[key];if(typeof stored.pok==='boolean')$('pok').checked=stored.pok;
-function go(screen){for(const s of ['home','create','join','matches','pick','notifications','account'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join','account'].includes(screen)?'home':screen)));const headings={account:['ACCOUNT','Il tuo account','Collega la tua email o accedi.'],home:['GAME ROOM',stored.game_id?(stored.game||'Partita online'):'Nessuna partita selezionata','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);
+let accountVerified=false;
+let accountGateChecked=false;
+function setAccountMode(mode){
+  $('account-choices').classList.toggle('hidden',Boolean(mode));
+  $('account-form').classList.toggle('hidden',!mode);
+  $('account-form-title').textContent=mode==='login'?'Accedi con la tua email':'Registra la tua email';
+  $('account-link').classList.toggle('hidden',mode!=='register');
+  $('account-login').classList.toggle('hidden',mode!=='login');
+  $('account-message').textContent='';
+}
+$('choose-login').addEventListener('click',()=>setAccountMode('login'));
+$('choose-register').addEventListener('click',()=>setAccountMode('register'));
+$('account-back').addEventListener('click',()=>setAccountMode(null));
+async function checkAccountGate(){
+  try{
+    const {data:{user}}=await supabase.auth.getUser();
+    accountVerified=Boolean(user?.email && user?.email_confirmed_at && !user?.is_anonymous);
+  }catch(error){accountVerified=false;}
+  accountGateChecked=true;
+  document.querySelector('.tabs').classList.toggle('hidden',!accountVerified);
+  if(!accountVerified){
+    setAccountMode(null);
+    go('account');
+  }else if(!$('account').classList.contains('hidden')){
+    go('home');
+  }
+}
+function go(screen){if(!accountVerified && screen!=='account')screen='account';for(const s of ['home','create','join','matches','pick','notifications','account'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join','account'].includes(screen)?'home':screen)));const headings={account:['ACCOUNT','Il tuo account','Collega la tua email o accedi.'],home:['GAME ROOM',stored.game_id?(stored.game||'Partita online'):'Nessuna partita selezionata','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);
                     
 
 if (screen === 'account') { refreshAccountStatus(); loadMyOnlineGames(); }
@@ -1133,6 +1160,7 @@ async function refreshAccountStatus(){
     $('account-link').disabled=Boolean(user?.email);
     $('account-login').disabled=Boolean(user&&(!user.email||user.is_anonymous));
     if(user?.email)$('account-email').value=user.email;
+    if(user?.email && user?.email_confirmed_at && !user?.is_anonymous && !accountVerified)await checkAccountGate();
   }catch(e){status.textContent='Verifica non disponibile: '+e.message;}
 }
 $('account-link').addEventListener('click',async()=>{
@@ -1157,7 +1185,7 @@ $('account-login').addEventListener('click',async()=>{
   const button=$('account-login');button.disabled=true;
   try{
     const {data:{user}}=await supabase.auth.getUser();
-    if(user?.is_anonymous||(!user?.email&&JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id)){
+    if((user?.is_anonymous||!user?.email)&&JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id){
       throw new Error('Questo browser contiene un account anonimo: collega prima l’email, non effettuare un nuovo accesso.');
     }
     const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:AUTH_REDIRECT,shouldCreateUser:false}});
@@ -1168,11 +1196,11 @@ $('account-login').addEventListener('click',async()=>{
 });
 supabase.auth.onAuthStateChange((event)=>{
   if(event==='SIGNED_IN'||event==='USER_UPDATED'){
-    window.setTimeout(()=>{refreshAccountStatus();loadMyOnlineGames();},0);
+    window.setTimeout(()=>{checkAccountGate();refreshAccountStatus();if(accountVerified)loadMyOnlineGames();},0);
   }
 });
 
-update();go('home');loadGameStatus();loadMyOnlineGames();
+update();go('account');checkAccountGate().then(()=>{if(accountVerified){loadGameStatus();loadMyOnlineGames();}});
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
