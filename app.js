@@ -1111,15 +1111,26 @@ async function loadMyOnlineGames(){
 }
 $('refresh-my-games').addEventListener('click',loadMyOnlineGames);
 const AUTH_REDIRECT = 'https://8590piu3.github.io/TWI-Secret-Factions/';
+async function getAccountUserForLink(){
+  const {data:{user},error}=await supabase.auth.getUser();
+  if(user && !error)return user;
+  const saved=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  if(saved.game_id){
+    throw new Error('La sessione della partita non è disponibile in questo browser. Non creare un nuovo account: riapri il browser originale o chiedi assistenza per recuperare la partita.');
+  }
+  const {data,error:signInError}=await supabase.auth.signInAnonymously();
+  if(signInError||!data.user)throw signInError||new Error('Impossibile avviare un nuovo account.');
+  return data.user;
+}
 async function refreshAccountStatus(){
   const status=$('account-status');
   try{
     const {data:{user},error}=await supabase.auth.getUser();
-    if(error)throw error;
-    status.textContent=!user?'Nessun account attivo su questo browser.':user.email
+    if(error && error.name!=='AuthSessionMissingError')throw error;
+    status.textContent=!user?'Nessun account attivo. Per registrarti inserisci la tua email e premi «Collega email a questo account».':user.email
       ?'Email associata: '+user.email+(user.email_confirmed_at?' (verificata)':' (in attesa di verifica)')
       :'Account anonimo attivo su questo browser. Puoi collegare la tua email senza perdere le partite.';
-    $('account-link').disabled=!user||Boolean(user.email);
+    $('account-link').disabled=Boolean(user?.email);
     $('account-login').disabled=Boolean(user&&(!user.email||user.is_anonymous));
     if(user?.email)$('account-email').value=user.email;
   }catch(e){status.textContent='Verifica non disponibile: '+e.message;}
@@ -1130,8 +1141,7 @@ $('account-link').addEventListener('click',async()=>{
   if(!email || !$('account-email').checkValidity()){msg.textContent='Controlla che l’indirizzo email sia completo e senza spazi.';return;}
   const button=$('account-link');button.disabled=true;
   try{
-    const {data:{user},error:sessionError}=await supabase.auth.getUser();
-    if(sessionError||!user)throw new Error('Account non trovato: apri il browser originale.');
+    const user=await getAccountUserForLink();
     if(user.email)throw new Error('Questo account ha già un indirizzo email.');
     const {error}=await supabase.auth.updateUser({email},{emailRedirectTo:AUTH_REDIRECT});
     if(error)throw error;
