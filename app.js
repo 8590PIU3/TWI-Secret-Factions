@@ -22,13 +22,18 @@ const thunder = [
 const $=id=>document.getElementById(id);let assigned=null;const stored=JSON.parse(localStorage.getItem('ti-demo')||'{}');
 for(const key of ['name','game','date','time'])if(stored[key])$(key).value=stored[key];if(typeof stored.pok==='boolean')$('pok').checked=stored.pok;
 let accountVerified=false;
-let accountGateChecked=false;
+let accountMode=null;
+function hasLocalGame(){return Boolean(JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id);}
 function setAccountMode(mode){
+  accountMode=mode;
   $('account-choices').classList.toggle('hidden',Boolean(mode));
   $('account-form').classList.toggle('hidden',!mode);
-  $('account-form-title').textContent=mode==='login'?'Accedi con la tua email':'Registra la tua email';
+  $('account-form-title').textContent=mode==='login'?'Accedi con email e password':mode==='password'?'Imposta una password':'Registrati con email e password';
   $('account-link').classList.toggle('hidden',mode!=='register');
   $('account-login').classList.toggle('hidden',mode!=='login');
+  $('account-set-password').classList.toggle('hidden',mode!=='password');
+  $('account-confirm-wrap').classList.toggle('hidden',mode!=='register');
+  $('account-password').autocomplete=mode==='login'?'current-password':'new-password';
   $('account-message').textContent='';
 }
 $('choose-login').addEventListener('click',()=>setAccountMode('login'));
@@ -37,14 +42,13 @@ $('account-back').addEventListener('click',()=>setAccountMode(null));
 async function checkAccountGate(){
   try{
     const {data:{user}}=await supabase.auth.getUser();
-    accountVerified=Boolean(user?.email && user?.email_confirmed_at && !user?.is_anonymous);
+    accountVerified=Boolean(user?.email && !user?.is_anonymous && user?.email_confirmed_at) || Boolean(user?.is_anonymous && hasLocalGame());
   }catch(error){accountVerified=false;}
-  accountGateChecked=true;
   document.querySelector('.tabs').classList.toggle('hidden',!accountVerified);
   if(!accountVerified){
-    setAccountMode(null);
+    if(!accountMode)setAccountMode(null);
     go('account');
-  }else if(!$('account').classList.contains('hidden')){
+  }else if(!$('account').classList.contains('hidden') && !accountMode){
     go('home');
   }
 }
@@ -1137,66 +1141,83 @@ async function loadMyOnlineGames(){
   }
 }
 $('refresh-my-games').addEventListener('click',loadMyOnlineGames);
-const AUTH_REDIRECT = 'https://8590piu3.github.io/TWI-Secret-Factions/';
-async function getAccountUserForLink(){
-  const {data:{user},error}=await supabase.auth.getUser();
-  if(user && !error)return user;
-  const saved=JSON.parse(localStorage.getItem('ti-demo')||'{}');
-  if(saved.game_id){
-    throw new Error('La sessione della partita non è disponibile in questo browser. Non creare un nuovo account: riapri il browser originale o chiedi assistenza per recuperare la partita.');
-  }
-  const {data,error:signInError}=await supabase.auth.signInAnonymously();
-  if(signInError||!data.user)throw signInError||new Error('Impossibile avviare un nuovo account.');
-  return data.user;
-}
 async function refreshAccountStatus(){
   const status=$('account-status');
   try{
-    const {data:{user},error}=await supabase.auth.getUser();
-    if(error && error.name!=='AuthSessionMissingError')throw error;
-    status.textContent=!user?'Nessun account attivo. Per registrarti inserisci la tua email e premi «Collega email a questo account».':user.email
-      ?'Email associata: '+user.email+(user.email_confirmed_at?' (verificata)':' (in attesa di verifica)')
-      :'Account anonimo attivo su questo browser. Puoi collegare la tua email senza perdere le partite.';
-    $('account-link').disabled=Boolean(user?.email);
-    $('account-login').disabled=Boolean(user&&(!user.email||user.is_anonymous));
-    if(user?.email)$('account-email').value=user.email;
-    if(user?.email && user?.email_confirmed_at && !user?.is_anonymous && !accountVerified)await checkAccountGate();
-  }catch(e){status.textContent='Verifica non disponibile: '+e.message;}
+    const {data:{user}}=await supabase.auth.getUser();
+    if(user?.is_anonymous && hasLocalGame()){
+      status.textContent='Hai già una partita associata a questo browser. Puoi continuare a usarla; non creare un nuovo account o perderesti il collegamento. Per collegare l’email senza verifica serve una migrazione dedicata.';
+    }else if(user?.email && !user.is_anonymous){
+      status.textContent='Account: '+user.email;
+      if(accountMode==='register')setAccountMode('password');
+    }else{
+      status.textContent='Inserisci email e password. Nessun link di verifica richiesto.';
+    }
+    if(user?.email && accountMode==='password')$('account-email').value=user.email;
+  }catch(error){status.textContent='Verifica account non disponibile: '+error.message;}
+}
+function accountCredentials(){
+  const email=$('account-email').value.trim();
+  const password=$('account-password').value;
+  if(!email || !$('account-email').checkValidity())throw new Error('Inserisci un indirizzo email valido.');
+  if(password.length<8)throw new Error('La password deve avere almeno 8 caratteri.');
+  return {email,password};
 }
 $('account-link').addEventListener('click',async()=>{
-  const email=$('account-email').value.trim();
-  const msg=$('account-message');msg.textContent='';
-  if(!email || !$('account-email').checkValidity()){msg.textContent='Controlla che l’indirizzo email sia completo e senza spazi.';return;}
-  const button=$('account-link');button.disabled=true;
+  const msg=$('account-message'),button=$('account-link');msg.textContent='';
   try{
-    const user=await getAccountUserForLink();
-    if(user.email)throw new Error('Questo account ha già un indirizzo email.');
-    const {error}=await supabase.auth.updateUser({email},{emailRedirectTo:AUTH_REDIRECT});
+    const {email,password}=accountCredentials();
+    if(password!==$('account-password-confirm').value)throw new Error('Le due password non coincidono.');
+    button.disabled=true;
+    const {data:{user}}=await supabase.auth.getUser();
+    if(user?.is_anonymous && hasLocalGame())throw new Error('Questo browser contiene già una partita anonima. Non creare un altro account qui: rischieresti di perdere l’accesso alla partita.');
+    if(user?.email && !user.is_anonymous)throw new Error('Questo indirizzo ha già un account: scegli Accedi. Se usavi il link email, puoi impostare una password dalla sessione già aperta.');
+    if(user?.is_anonymous){
+      const {error:signOutError}=await supabase.auth.signOut();
+      if(signOutError)throw signOutError;
+    }
+    const {data,error}=await supabase.auth.signUp({email,password});
     if(error)throw error;
-    msg.textContent='Controlla la tua email e apri il link di verifica. Mantieni aperto questo browser e non uscire dall’account.';
-    await refreshAccountStatus();
-  }catch(e){msg.textContent='Impossibile collegare l’email: '+e.message;}
+    if(!data.session){
+      msg.textContent='Account creato, ma Supabase richiede ancora una conferma email. Controlla che «Confirm email» sia disattivato nelle impostazioni.';
+      return;
+    }
+    msg.textContent='Account creato! Accesso effettuato.';
+    await checkAccountGate();
+  }catch(error){msg.textContent='Registrazione non riuscita: '+error.message;}
   finally{button.disabled=false;}
 });
 $('account-login').addEventListener('click',async()=>{
-  const email=$('account-email').value.trim();
-  const msg=$('account-message');msg.textContent='';
-  if(!email || !$('account-email').checkValidity()){msg.textContent='Controlla che l’indirizzo email sia completo e senza spazi.';return;}
-  const button=$('account-login');button.disabled=true;
+  const msg=$('account-message'),button=$('account-login');msg.textContent='';
+  try{
+    const {email,password}=accountCredentials();
+    const {data:{user}}=await supabase.auth.getUser();
+    if(user?.is_anonymous && hasLocalGame())throw new Error('Su questo browser c’è già una partita anonima. Non cambiare account qui, per non perdere l’accesso.');
+    button.disabled=true;
+    const {error}=await supabase.auth.signInWithPassword({email,password});
+    if(error)throw error;
+    msg.textContent='Accesso effettuato.';
+    await checkAccountGate();
+  }catch(error){msg.textContent='Accesso non riuscito: '+error.message;}
+  finally{button.disabled=false;}
+});
+$('account-set-password').addEventListener('click',async()=>{
+  const msg=$('account-message'),button=$('account-set-password');msg.textContent='';
   try{
     const {data:{user}}=await supabase.auth.getUser();
-    if((user?.is_anonymous||!user?.email)&&JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id){
-      throw new Error('Questo browser contiene un account anonimo: collega prima l’email, non effettuare un nuovo accesso.');
-    }
-    const {error}=await supabase.auth.signInWithOtp({email,options:{emailRedirectTo:AUTH_REDIRECT,shouldCreateUser:false}});
+    if(!user?.email || user.is_anonymous)throw new Error('Accedi prima al tuo account email.');
+    const password=$('account-password').value;
+    if(password.length<8)throw new Error('La password deve avere almeno 8 caratteri.');
+    button.disabled=true;
+    const {error}=await supabase.auth.updateUser({password});
     if(error)throw error;
-    msg.textContent='Se l’indirizzo è già registrato, riceverai un link per accedere. Aprilo sul dispositivo da collegare.';
-  }catch(e){msg.textContent='Impossibile inviare il link: '+e.message;}
+    msg.textContent='Password impostata. Potrai accedere con email e password.';
+  }catch(error){msg.textContent='Impossibile impostare la password: '+error.message;}
   finally{button.disabled=false;}
 });
 supabase.auth.onAuthStateChange((event)=>{
-  if(event==='SIGNED_IN'||event==='USER_UPDATED'){
-    window.setTimeout(async()=>{const {data:{user}}=await supabase.auth.getUser();if(user?.email && user?.email_confirmed_at && !user?.is_anonymous){await checkAccountGate();loadMyOnlineGames();}refreshAccountStatus();},0);
+  if(['SIGNED_IN','USER_UPDATED','SIGNED_OUT'].includes(event)){
+    window.setTimeout(async()=>{await checkAccountGate();refreshAccountStatus();if(accountVerified)loadMyOnlineGames();},0);
   }
 });
 
