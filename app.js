@@ -508,8 +508,8 @@ function renderOverviewAlert(){
   let message='';
   if(overviewTimerStatus==='open'&&remaining<=0){
     message='Attenzione: la scadenza per l’assegnazione è arrivata. Lo stato verrà verificato.';
-  }else if(overviewTimerStatus==='open'&&remaining<=24*60*60*1000){
-    message='Assegnazione vicina: meno di 24 ore alla chiusura delle preferenze.';
+  }else if(overviewTimerStatus==='open'&&remaining<=13*60*60*1000){
+    message='Assegnazione vicina: meno di 13 ore alla chiusura delle iscrizioni e delle preferenze.';
   }else if(overviewTimerStatus==='locked'){
     message='Assegnazione completata. Le fazioni saranno visibili soltanto dopo la rivelazione.';
   }else if(overviewTimerStatus==='revealed'){
