@@ -463,9 +463,33 @@ let overviewTimerGameId=null;
 let overviewTimerStatus=null;
 let overviewTimerScheduledAt=null;
 let overviewTransitionChecked='';
+function renderOverviewAlert(){
+  const alert=$('overview-alert');
+  if(!alert)return;
+  const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  if(!overviewTimerGameId||selected.game_id!==overviewTimerGameId||!overviewTimerScheduledAt){
+    alert.classList.add('hidden');
+    alert.textContent='';
+    return;
+  }
+  const remaining=overviewTimerScheduledAt-24*60*60*1000-Date.now();
+  let message='';
+  if(overviewTimerStatus==='open'&&remaining<=0){
+    message='Attenzione: la scadenza per l’assegnazione è arrivata. Lo stato verrà verificato.';
+  }else if(overviewTimerStatus==='open'&&remaining<=24*60*60*1000){
+    message='Assegnazione vicina: meno di 24 ore alla chiusura delle preferenze.';
+  }else if(overviewTimerStatus==='locked'){
+    message='Assegnazione completata. Le fazioni saranno visibili soltanto dopo la rivelazione.';
+  }else if(overviewTimerStatus==='revealed'){
+    message='Rivelazione completata: puoi consultare le fazioni pubblicate.';
+  }
+  alert.textContent=message;
+  alert.classList.toggle('hidden',!message);
+}
 function renderOverviewCountdown(){
   const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
   if(!overviewTimerGameId||selected.game_id!==overviewTimerGameId||!overviewTimerScheduledAt)return;
+  renderOverviewAlert();
   const el=$('overview-countdown');
   if(overviewTimerStatus==='revealed'){
     el.textContent='Rivelazione completata';
@@ -504,6 +528,7 @@ async function loadMatchOverview(){
     overviewTimerGameId=null;
     overviewTimerStatus=null;
     overviewTimerScheduledAt=null;
+    renderOverviewAlert();
     fields.forEach(key=>$(key).textContent='—');
     $('overview-title').textContent='Nessuna partita selezionata';
     return;
