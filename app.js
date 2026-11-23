@@ -37,7 +37,7 @@ function setAccountMode(mode){
   $('account-message').textContent='';
 }
 $('choose-login').addEventListener('click',()=>setAccountMode('login'));
-$('choose-register').addEventListener('click',()=>setAccountMode('register'));
+$('choose-register').addEventListener('click',async()=>{const {data:{user}}=await supabase.auth.getUser();setAccountMode(user?.email&&!user.is_anonymous?'password':'register');refreshAccountStatus();});
 $('account-back').addEventListener('click',()=>setAccountMode(null));
 async function checkAccountGate(){
   try{
@@ -1182,7 +1182,7 @@ $('account-link').addEventListener('click',async()=>{
       msg.textContent='Account creato, ma Supabase richiede ancora una conferma email. Controlla che «Confirm email» sia disattivato nelle impostazioni.';
       return;
     }
-    msg.textContent='Account creato! Accesso effettuato.';
+    setAccountMode(null);
     await checkAccountGate();
   }catch(error){msg.textContent='Registrazione non riuscita: '+error.message;}
   finally{button.disabled=false;}
@@ -1196,7 +1196,7 @@ $('account-login').addEventListener('click',async()=>{
     button.disabled=true;
     const {error}=await supabase.auth.signInWithPassword({email,password});
     if(error)throw error;
-    msg.textContent='Accesso effettuato.';
+    setAccountMode(null);
     await checkAccountGate();
   }catch(error){msg.textContent='Accesso non riuscito: '+error.message;}
   finally{button.disabled=false;}
