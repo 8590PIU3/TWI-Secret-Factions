@@ -850,6 +850,22 @@ async function loadGameNotifications() {
 $('notifications-refresh')?.addEventListener('click', loadGameNotifications);
 
 
+// La selezione e' salvata nei metadati dell'account, non nei dati della partita.
+let lastSyncedGameKey='';
+function selectOnlineGame(game,memberships){
+  const dateTime=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).format(new Date(game.scheduled_at));
+  const current=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  const same=current.game_id===game.id;
+  const membership=(memberships||[]).find(m=>m.game_id===game.id);
+  const next={...current,game_id:game.id,game:game.title,
+    date:dateTime.slice(0,10),time:dateTime.slice(11,16),
+    invite_code:game.invite_code||'',name:membership?.display_name||'',
+    picks:same?current.picks:null};
+  localStorage.setItem('ti-demo',JSON.stringify(next));
+  Object.assign(stored,next);
+  confirmedGameId=null;
+  update();restoreOnlineGame();
+}
 async function loadMyOnlineGames(){
   const section=$('my-online-games');
   const list=$('my-games-list');
@@ -874,6 +890,17 @@ async function loadMyOnlineGames(){
     }
     const byId=new Map([...memberGames,...(organized||[])].map(g=>[g.id,g]));
     const games=[...byId.values()].sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+    // Ripristina solo una partita effettivamente accessibile all'utente autenticato.
+    const preferredId=user.user_metadata?.ti_last_game_id;
+    const preferred=preferredId&&byId.get(preferredId);
+    if(preferred){
+      const key=user.id+':'+preferred.id;
+      const current=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+      if(current.game_id!==preferred.id){
+        selectOnlineGame(preferred,memberships);
+      }
+      lastSyncedGameKey=key;
+    }
     section.classList.remove('hidden');
     list.replaceChildren();
     if(!games.length){list.textContent='Nessuna partita associata a questo account.';return;}
@@ -889,20 +916,19 @@ async function loadMyOnlineGames(){
       button.className='btn outline';
       button.type='button';
       button.textContent='Apri questa partita';
-      button.addEventListener('click',()=>{
-        const dateTime=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(game.scheduled_at));
-        const current=JSON.parse(localStorage.getItem('ti-demo')||'{}');
-        const same=current.game_id===game.id;
-        const membership=(memberships||[]).find(m=>m.game_id===game.id);
-        const next={...current,game_id:game.id,game:game.title,
-          date:dateTime.slice(0,10),time:dateTime.slice(11,16),
-          invite_code:game.invite_code||'',name:membership?.display_name||current.name||'',
-          picks:same?current.picks:null};
-        localStorage.setItem('ti-demo',JSON.stringify(next));
-        Object.assign(stored,next);
-        confirmedGameId=null;
-        update();restoreOnlineGame();go('matches');
-        loadGameStatus();loadPlayerCount();loadMyConfirmationStatus();
+      button.addEventListener('click',async()=>{
+        selectOnlineGame(game,memberships);
+        go('matches');
+        // Sincronizza la scelta tra dispositivi senza toccare partite o preferenze.
+        try{
+          const {data:{user:active}}=await supabase.auth.getUser();
+          if(active?.id!==user.id)return;
+          const {error}=await supabase.auth.updateUser({data:{ti_last_game_id:game.id}});
+          if(error)throw error;
+          lastSyncedGameKey=user.id+':'+game.id;
+        }catch(error){
+          console.warn('Ultima partita salvata solo su questo dispositivo:',error);
+        }
       });
       item.append(title,detail,button);
       list.append(item);
