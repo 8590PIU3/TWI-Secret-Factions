@@ -1047,7 +1047,7 @@ async function loadMyOnlineGames(){
           console.warn('Ultima partita salvata solo su questo dispositivo:',error);
         }
       });
-      if((organized||[]).some(g=>g.id===game.id)&&game.status==='open'){
+      if((organized||[]).some(g=>g.id===game.id)&&['open','locked'].includes(game.status)){
         const edit=document.createElement('button');
         edit.className='btn outline';
         edit.type='button';
@@ -1093,6 +1093,23 @@ async function loadMyOnlineGames(){
           edit.replaceWith(panel);
         });
         item.append(edit);
+      }
+      if((organized||[]).some(g=>g.id===game.id)&&game.status==='locked'){
+        const early=document.createElement('button');
+        early.className='btn outline';
+        early.type='button';
+        early.textContent='Rivela ora le fazioni individuali';
+        early.onclick=async()=>{
+          if(!confirm('Vuoi rendere subito visibile a ciascun partecipante soltanto la propria fazione? Non sarà possibile annullare la rivelazione.'))return;
+          early.disabled=true;
+          try{
+            const {error}=await supabase.rpc('reveal_personal_factions_early',{p_game_id:game.id});
+            if(error)throw error;
+            early.textContent='Fazioni personali rese visibili';
+            await loadMyRevealedFaction();
+          }catch(error){alert('Rivelazione non riuscita: '+error.message);early.disabled=false;}
+        };
+        item.append(early);
       }
       item.append(title,detail,button);
       list.append(item);
