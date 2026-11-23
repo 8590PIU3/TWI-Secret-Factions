@@ -513,12 +513,40 @@ function renderOverviewCountdown(){
   const label=overviewTimerStatus==='open'?'All’assegnazione':'Alla rivelazione';
   el.textContent=label+': '+(days?days+' giorni, ':'')+hours+' ore e '+mins+' minuti';
 }
+let lastOverviewServerCheck=0;
+let overviewServerCheckRunning=false;
+async function refreshVisibleMatchStatus(force=false){
+  if(document.hidden||$('matches').classList.contains('hidden'))return;
+  const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  if(!selected.game_id)return;
+  if(overviewServerCheckRunning||(!force&&Date.now()-lastOverviewServerCheck<60000))return;
+  overviewServerCheckRunning=true;
+  lastOverviewServerCheck=Date.now();
+  try{
+    await loadMatchOverview();
+    // Ricarica anche lo stato e le informazioni visibili, rispettando le policy Supabase.
+    loadGameStatus();
+    loadPlayerCount();
+    loadOrganizerGameHealth();
+    loadMyConfirmationStatus();
+    loadRevealedFaction();
+  }finally{
+    overviewServerCheckRunning=false;
+  }
+}
 window.setInterval(()=>{
-  if(!$('matches').classList.contains('hidden'))renderOverviewCountdown();
+  if(!$('matches').classList.contains('hidden')){
+    renderOverviewCountdown();
+    if(Date.now()-lastOverviewServerCheck>=5*60*1000)refreshVisibleMatchStatus();
+  }
 },30000);
 document.addEventListener('visibilitychange',()=>{
-  if(!document.hidden&&!$('matches').classList.contains('hidden'))renderOverviewCountdown();
+  if(!document.hidden&&!$('matches').classList.contains('hidden')){
+    renderOverviewCountdown();
+    refreshVisibleMatchStatus();
+  }
 });
+window.addEventListener('focus',()=>refreshVisibleMatchStatus());
 
 async function loadMatchOverview(){
   const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
