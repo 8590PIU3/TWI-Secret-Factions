@@ -1132,6 +1132,53 @@ async function loadMyOnlineGames(){
           console.warn('Ultima partita salvata solo su questo dispositivo:',error);
         }
       });
+      if((organized||[]).some(g=>g.id===game.id)&&game.status==='open'){
+        const edit=document.createElement('button');
+        edit.className='btn outline';
+        edit.type='button';
+        edit.textContent='Modifica data e ora';
+        edit.addEventListener('click',()=>{
+          const old=new Date(game.scheduled_at);
+          const local=new Date(old.getTime()-old.getTimezoneOffset()*60000).toISOString().slice(0,16);
+          const panel=document.createElement('div');
+          const label=document.createElement('label');
+          label.textContent='Nuova data e ora della partita';
+          const field=document.createElement('input');
+          field.type='datetime-local';
+          field.value=local;
+          const save=document.createElement('button');
+          save.type='button';
+          save.className='btn';
+          save.textContent='Salva nuova data';
+          const msg=document.createElement('p');
+          msg.className='message';
+          save.onclick=async()=>{
+            const date=new Date(field.value);
+            if(!field.value||!Number.isFinite(date.getTime())){msg.textContent='Inserisci una data valida.';return;}
+            if(date.getTime()<=Date.now()+13*3600000){msg.textContent='La nuova data deve essere oltre 13 ore nel futuro.';return;}
+            if(!confirm('Confermi il cambio di data e ora? Le scadenze per iscrizioni e fazioni verranno ricalcolate.'))return;
+            save.disabled=true;
+            try{
+              const {error}=await supabase.rpc('reschedule_game',{p_game_id:game.id,p_scheduled_at:date.toISOString()});
+              if(error)throw error;
+              const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+              if(selected.game_id===game.id){
+                selected.date=field.value.slice(0,10);
+                selected.time=field.value.slice(11,16);
+                localStorage.setItem('ti-demo',JSON.stringify(selected));
+                Object.assign(stored,selected);
+                update();
+              }
+              await loadMyOnlineGames();
+              await loadMatchOverview();
+            }catch(error){msg.textContent='Modifica non riuscita: '+error.message;save.disabled=false;}
+          };
+          label.append(field);
+          panel.append(label,save,msg);
+          edit.replaceWith(panel);
+        });
+        item.append(edit);
+      }
       item.append(title,detail,button);
       list.append(item);
     }
