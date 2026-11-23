@@ -459,11 +459,51 @@ async function loadMyConfirmationStatus() {
   }
 }
 
+let overviewTimerGameId=null;
+let overviewTimerStatus=null;
+let overviewTimerScheduledAt=null;
+let overviewTransitionChecked='';
+function renderOverviewCountdown(){
+  const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  if(!overviewTimerGameId||selected.game_id!==overviewTimerGameId||!overviewTimerScheduledAt)return;
+  const el=$('overview-countdown');
+  if(overviewTimerStatus==='revealed'){
+    el.textContent='Rivelazione completata';
+    return;
+  }
+  const due=overviewTimerScheduledAt-(overviewTimerStatus==='open'?24:12)*60*60*1000;
+  const remaining=due-Date.now();
+  if(remaining<=0){
+    el.textContent=overviewTimerStatus==='open'?'Scadenza raggiunta: verifica assegnazione':'Scadenza raggiunta: verifica rivelazione';
+    const key=overviewTimerGameId+':'+overviewTimerStatus;
+    if(overviewTransitionChecked!==key){
+      overviewTransitionChecked=key;
+      loadMatchOverview();
+    }
+    return;
+  }
+  const minutes=Math.ceil(remaining/60000);
+  const days=Math.floor(minutes/1440);
+  const hours=Math.floor((minutes%1440)/60);
+  const mins=minutes%60;
+  const label=overviewTimerStatus==='open'?'All’assegnazione':'Alla rivelazione';
+  el.textContent=label+': '+(days?days+' giorni, ':'')+hours+' ore e '+mins+' minuti';
+}
+window.setInterval(()=>{
+  if(!$('matches').classList.contains('hidden'))renderOverviewCountdown();
+},30000);
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden&&!$('matches').classList.contains('hidden'))renderOverviewCountdown();
+});
+
 async function loadMatchOverview(){
   const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
   const id=selected.game_id;
   const fields=['overview-title','overview-date','overview-status','overview-players','overview-confirmed','overview-countdown'];
   if(!id){
+    overviewTimerGameId=null;
+    overviewTimerStatus=null;
+    overviewTimerScheduledAt=null;
     fields.forEach(key=>$(key).textContent='—');
     $('overview-title').textContent='Nessuna partita selezionata';
     return;
@@ -487,17 +527,10 @@ async function loadMatchOverview(){
     $('overview-date').textContent=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',dateStyle:'long',timeStyle:'short'}).format(scheduled);
     $('overview-status').textContent=({open:'Aperta',locked:'Assegnata',revealed:'Rivelata'})[game.status]||game.status;
     $('overview-players').textContent=String(count);
-    if(game.status==='open'){
-      const remaining=scheduled.getTime()-24*60*60*1000-Date.now();
-      if(remaining<=0)$('overview-countdown').textContent='Scadenza raggiunta: in attesa dell’assegnazione';
-      else{
-        const hours=Math.floor(remaining/3600000);
-        const minutes=Math.ceil((remaining%3600000)/60000);
-        $('overview-countdown').textContent=hours+' ore e '+minutes+' minuti rimanenti';
-      }
-    }else{
-      $('overview-countdown').textContent=game.status==='locked'?'Assegnazione completata':'Partita già rivelata';
-    }
+    overviewTimerGameId=id;
+    overviewTimerStatus=game.status;
+    overviewTimerScheduledAt=scheduled.getTime();
+    renderOverviewCountdown();
     // RPC accessibile soltanto all'organizzatore; nessun dato sulle scelte individuali.
     try{
       const {data:health,error}=await supabase.rpc('get_organizer_game_health',{p_game_id:id});
