@@ -1179,11 +1179,14 @@ $('account-link').addEventListener('click',async()=>{
     const {data,error}=await supabase.auth.signUp({email,password});
     if(error)throw error;
     if(!data.session){
-      msg.textContent='Account creato, ma Supabase richiede ancora una conferma email. Controlla che «Confirm email» sia disattivato nelle impostazioni.';
-      return;
+      if(data.user && Array.isArray(data.user.identities) && data.user.identities.length===0){
+        throw new Error('Questa email risulta già registrata. Torna alle opzioni e scegli «Accedi». Se sei l’organizzatore e non hai una password, apri l’app nel browser in cui sei già collegato e scegli «Registrati» per impostarla.');
+      }
+      throw new Error('Registrazione non completata: Supabase non ha aperto una sessione. Verifica che «Confirm email» sia disattivato.');
     }
     setAccountMode(null);
     await checkAccountGate();
+    if(accountVerified)go('home');
   }catch(error){msg.textContent='Registrazione non riuscita: '+error.message;}
   finally{button.disabled=false;}
 });
@@ -1198,6 +1201,7 @@ $('account-login').addEventListener('click',async()=>{
     if(error)throw error;
     setAccountMode(null);
     await checkAccountGate();
+    if(accountVerified)go('home');
   }catch(error){msg.textContent='Accesso non riuscito: '+error.message;}
   finally{button.disabled=false;}
 });
