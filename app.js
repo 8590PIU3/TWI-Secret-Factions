@@ -26,6 +26,7 @@ function go(screen){for(const s of ['home','create','join','matches','pick','not
 
 if (screen === 'account') { refreshAccountStatus(); loadMyOnlineGames(); }
 if (screen === 'matches') {
+  loadMatchOverview();
   loadGameStatus();
   loadPlayerCount();
   loadRevealedFaction();
@@ -457,6 +458,59 @@ async function loadMyConfirmationStatus() {
     $('message').textContent = 'Impossibile verificare le preferenze. Riprova più tardi.';
   }
 }
+
+async function loadMatchOverview(){
+  const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  const id=selected.game_id;
+  const fields=['overview-title','overview-date','overview-status','overview-players','overview-confirmed','overview-countdown'];
+  if(!id){
+    fields.forEach(key=>$(key).textContent='—');
+    $('overview-title').textContent='Nessuna partita selezionata';
+    return;
+  }
+  $('overview-title').textContent='Caricamento...';
+  $('overview-date').textContent='—';
+  $('overview-status').textContent='—';
+  $('overview-players').textContent='—';
+  $('overview-confirmed').textContent='Solo organizzatore';
+  $('overview-countdown').textContent='—';
+  try{
+    const [{data:game,error:gameError},{data:count,error:countError}]=await Promise.all([
+      supabase.from('games').select('title,scheduled_at,status').eq('id',id).single(),
+      supabase.rpc('get_game_player_count',{p_game_id:id})
+    ]);
+    if(gameError)throw gameError;
+    if(countError)throw countError;
+    if(JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id!==id)return;
+    const scheduled=new Date(game.scheduled_at);
+    $('overview-title').textContent=game.title;
+    $('overview-date').textContent=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',dateStyle:'long',timeStyle:'short'}).format(scheduled);
+    $('overview-status').textContent=({open:'Aperta',locked:'Assegnata',revealed:'Rivelata'})[game.status]||game.status;
+    $('overview-players').textContent=String(count);
+    if(game.status==='open'){
+      const remaining=scheduled.getTime()-24*60*60*1000-Date.now();
+      if(remaining<=0)$('overview-countdown').textContent='Scadenza raggiunta: in attesa dell’assegnazione';
+      else{
+        const hours=Math.floor(remaining/3600000);
+        const minutes=Math.ceil((remaining%3600000)/60000);
+        $('overview-countdown').textContent=hours+' ore e '+minutes+' minuti rimanenti';
+      }
+    }else{
+      $('overview-countdown').textContent=game.status==='locked'?'Assegnazione completata':'Partita già rivelata';
+    }
+    // RPC accessibile soltanto all'organizzatore; nessun dato sulle scelte individuali.
+    try{
+      const {data:health,error}=await supabase.rpc('get_organizer_game_health',{p_game_id:id});
+      if(!error&&health&&JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id===id)
+        $('overview-confirmed').textContent=String(health.confirmed)+' / '+String(health.players);
+    }catch(e){console.warn('Conteggio conferme riservato:',e);}
+  }catch(error){
+    if(JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id!==id)return;
+    $('overview-title').textContent='Riepilogo non disponibile';
+    console.warn('Errore riepilogo partita:',error);
+  }
+}
+$('overview-refresh').addEventListener('click',loadMatchOverview);
 
 async function loadGameStatus() {
   const statusElement = $('game-status');
