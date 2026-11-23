@@ -1,5 +1,5 @@
 
-const CACHE = 'ti-secret-factions-v9';
+const CACHE = 'ti-secret-factions-v10';
 
 const ASSETS = [
   './',
