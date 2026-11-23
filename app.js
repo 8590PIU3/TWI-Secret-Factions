@@ -724,7 +724,7 @@ async function loadMyRevealedFaction() {
       .single();
 
     if (gameError) throw gameError;
-    if (game.status !== 'revealed') return;
+    if (game.status !== 'locked' && game.status !== 'revealed') return;
 
     const { data: factionId, error: factionError } = await supabase.rpc(
       'get_my_revealed_faction',
@@ -762,94 +762,9 @@ async function loadMyRevealedFaction() {
 }
 
 async function loadRevealedFaction() {
-  const resultElement = $('revealResult');
-  if (!resultElement) return;
-
-  const gameData = JSON.parse(
-    localStorage.getItem('ti-demo') || '{}'
-  );
-
-  if (!gameData.game_id) {
-    resultElement.textContent = '';
-    return;
-  }
-
-  resultElement.textContent = '';
-
-  try {
-    const { data: game, error: gameError } = await supabase
-      .from('games')
-      .select('status')
-      .eq('id', gameData.game_id)
-      .single();
-
-    if (gameError) throw gameError;
-
-    if (game.status !== 'revealed') {
-      return;
-    }
-
-    
-const { data: revealed, error: revealError } =
-  await supabase.rpc('get_revealed_factions', {
-    p_game_id: gameData.game_id
-  });
-
-if (revealError) throw revealError;
-
-
-resultElement.replaceChildren();
-
-if (!revealed || revealed.length === 0) {
-  resultElement.textContent =
-    'Nessuna assegnazione disponibile.';
-  return;
+  const resultElement=$('revealResult');
+  if(resultElement) resultElement.textContent='Le fazioni degli altri giocatori restano sempre segrete.';
 }
-
-const { data: factions, error: factionsError } =
-  await supabase
-    .from('factions')
-    .select('id, name');
-
-if (factionsError) throw factionsError;
-
-const factionNames = new Map(
-  (factions || []).map(faction => [
-    faction.id,
-    faction.name
-  ])
-);
-
-const heading = document.createElement('h3');
-heading.textContent = 'Fazioni rivelate';
-resultElement.appendChild(heading);
-
-const list = document.createElement('ul');
-
-for (const player of revealed) {
-  const item = document.createElement('li');
-
-  const playerName = player.player_name || 'Giocatore';
-  const factionId = player.faction_id;
-
-  item.textContent = factionId
-    ? `${playerName}: ${factionNames.get(factionId) || factionId}`
-    : `${playerName}: fazione non assegnata`;
-
-  list.appendChild(item);
-}
-
-resultElement.appendChild(list);
-
-
-
-  } catch (error) {
-    console.error('Errore verifica rivelazione:', error);
-    resultElement.textContent =
-      'Impossibile verificare la rivelazione.';
-  }
-}
-
 
 async function loadOrganizerGameHealth() {
   const card = $('organizer-health-card');
@@ -890,7 +805,7 @@ async function loadOrganizerGameHealth() {
     }).format(value);
     if (!Number.isNaN(scheduledAt.getTime())) {
       $('organizer-assignment-date').textContent =
-        italianDate(new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000));
+        italianDate(new Date(scheduledAt.getTime() - 13 * 60 * 60 * 1000));
       $('organizer-reveal-date').textContent =
         italianDate(new Date(scheduledAt.getTime() - 12 * 60 * 60 * 1000));
     } else {
