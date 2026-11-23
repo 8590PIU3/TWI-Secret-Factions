@@ -26,6 +26,7 @@ function go(screen){for(const s of ['home','create','join','matches','pick','not
 
 if (screen === 'account') { refreshAccountStatus(); loadMyOnlineGames(); }
 if (screen === 'matches') {
+  loadMyOnlineGames();
   loadMatchOverview();
   loadGameStatus();
   loadPlayerCount();
@@ -1036,7 +1037,7 @@ async function loadMyOnlineGames(){
     // Ripristina solo una partita effettivamente accessibile all'utente autenticato.
     const preferredId=user.user_metadata?.ti_last_game_id;
     const preferred=preferredId&&byId.get(preferredId);
-    if(preferred){
+    if(preferred && !byId.has(JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id)){
       const key=user.id+':'+preferred.id;
       const current=JSON.parse(localStorage.getItem('ti-demo')||'{}');
       if(current.game_id!==preferred.id){
@@ -1044,6 +1045,33 @@ async function loadMyOnlineGames(){
       }
       lastSyncedGameKey=key;
     }
+    // Selettore delle partite direttamente nella schermata Partite.
+    const matchSelect=$('match-game-select');
+    const matchMessage=$('match-game-select-message');
+    matchSelect.replaceChildren(new Option('Scegli una partita',''));
+    for(const game of games){
+      const when=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',dateStyle:'medium',timeStyle:'short'}).format(new Date(game.scheduled_at));
+      matchSelect.add(new Option(game.title+' · '+when,game.id));
+    }
+    const currentId=JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id;
+    matchSelect.value=byId.has(currentId)?currentId:'';
+    matchSelect.disabled=!games.length;
+    matchMessage.textContent=games.length?'':'Nessuna partita associata a questo account.';
+    matchSelect.onchange=async()=>{
+      const chosen=byId.get(matchSelect.value);
+      if(!chosen)return;
+      selectOnlineGame(chosen,memberships);
+      go('matches');
+      try{
+        const {data:{user:active}}=await supabase.auth.getUser();
+        if(active?.id!==user.id)return;
+        const {error}=await supabase.auth.updateUser({data:{ti_last_game_id:chosen.id}});
+        if(error)throw error;
+        lastSyncedGameKey=user.id+':'+chosen.id;
+      }catch(error){
+        console.warn('Selezione salvata solo su questo dispositivo:',error);
+      }
+    };
     section.classList.remove('hidden');
     list.replaceChildren();
     if(!games.length){list.textContent='Nessuna partita associata a questo account.';return;}
