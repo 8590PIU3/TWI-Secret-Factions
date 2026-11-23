@@ -1196,7 +1196,7 @@ $('account-login').addEventListener('click',async()=>{
 });
 supabase.auth.onAuthStateChange((event)=>{
   if(event==='SIGNED_IN'||event==='USER_UPDATED'){
-    window.setTimeout(()=>{checkAccountGate();refreshAccountStatus();if(accountVerified)loadMyOnlineGames();},0);
+    window.setTimeout(async()=>{const {data:{user}}=await supabase.auth.getUser();if(user?.email && user?.email_confirmed_at && !user?.is_anonymous){await checkAccountGate();loadMyOnlineGames();}refreshAccountStatus();},0);
   }
 });
 
