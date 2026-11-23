@@ -825,6 +825,37 @@ async function loadOrganizerGameHealth() {
     } else {
       status.textContent = 'Regolare, in attesa dell’assegnazione';
     }
+    const field=$('organizer-new-datetime');
+    const save=$('organizer-save-datetime');
+    const msg=$('organizer-date-message');
+    const dateLocal=new Date(scheduledAt.getTime()-scheduledAt.getTimezoneOffset()*60000).toISOString().slice(0,16);
+    field.value=dateLocal;
+    msg.textContent='';
+    save.disabled=!['open','locked'].includes(data.status);
+    save.textContent=save.disabled?'Modifica non disponibile: partita rivelata':'Salva data e ora';
+    save.onclick=async()=>{
+      const newDate=new Date(field.value);
+      if(!field.value||!Number.isFinite(newDate.getTime())){msg.textContent='Inserisci data e ora valide.';return;}
+      if(newDate.getTime()<=Date.now()+13*3600000){msg.textContent='Scegli una data oltre 13 ore nel futuro.';return;}
+      if(!confirm('Confermi la nuova data e ora della partita?'))return;
+      save.disabled=true;
+      try{
+        const {error:changeError}=await supabase.rpc('reschedule_game',{p_game_id:selected.game_id,p_scheduled_at:newDate.toISOString()});
+        if(changeError)throw changeError;
+        const latest=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+        if(latest.game_id===selected.game_id){
+          latest.date=field.value.slice(0,10);
+          latest.time=field.value.slice(11,16);
+          localStorage.setItem('ti-demo',JSON.stringify(latest));
+          Object.assign(stored,latest);
+          update();
+        }
+        msg.textContent='Data e ora aggiornate.';
+        await loadMatchOverview();
+        await loadMyOnlineGames();
+        await loadOrganizerGameHealth();
+      }catch(e){msg.textContent='Errore: '+e.message;save.disabled=false;}
+    };
     card.classList.remove('hidden');
   } catch (error) {
     console.error('Errore stato organizzatore:', error);
