@@ -24,7 +24,7 @@ for(const key of ['name','game','date','time'])if(stored[key])$(key).value=store
 function go(screen){for(const s of ['home','create','join','matches','pick','notifications','account'])$(s).classList.toggle('hidden',s!==screen);document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.go===(['create','join','account'].includes(screen)?'home':screen)));const headings={account:['ACCOUNT','Il tuo account','Collega la tua email o accedi.'],home:['GAME ROOM',stored.game_id?(stored.game||'Partita online'):'Nessuna partita selezionata','La tua galassia. Le tue scelte segrete.'],create:['NUOVA PARTITA','Crea una partita','Organizza la tua prossima conquista.'],join:['INVITO','Entra in partita','Unisciti al tuo gruppo.'],matches:['PARTITE','Le tue partite','Prepara la prossima conquista galattica.'],pick:['FAZIONI','Un universo di possibilità','Scegli la tua fazione e due riserve.'],notifications:['NOTIFICHE','Rimani aggiornato','Messaggi dalla tua galassia.']}[screen];$('hero-label').textContent=headings[0];$('hero-title').textContent=headings[1];$('hero-sub').textContent=headings[2];window.scrollTo(0,0);
                     
 
-if (screen === 'account') refreshAccountStatus();
+if (screen === 'account') { refreshAccountStatus(); loadMyOnlineGames(); }
 if (screen === 'matches') {
   loadGameStatus();
   loadPlayerCount();
@@ -850,6 +850,69 @@ async function loadGameNotifications() {
 $('notifications-refresh')?.addEventListener('click', loadGameNotifications);
 
 
+async function loadMyOnlineGames(){
+  const section=$('my-online-games');
+  const list=$('my-games-list');
+  list.textContent='Caricamento delle tue partite...';
+  try{
+    const {data:{user},error:authError}=await supabase.auth.getUser();
+    if(authError)throw authError;
+    if(!user){section.classList.add('hidden');return;}
+    const {data:memberships,error:memberError}=await supabase.from('players')
+      .select('game_id,display_name').eq('user_id',user.id);
+    if(memberError)throw memberError;
+    const {data:organized,error:ownerError}=await supabase.from('games')
+      .select('id,title,scheduled_at,invite_code,status').eq('organizer_id',user.id);
+    if(ownerError)throw ownerError;
+    const ids=(memberships||[]).map(m=>m.game_id);
+    let memberGames=[];
+    if(ids.length){
+      const {data,error}=await supabase.from('games')
+        .select('id,title,scheduled_at,invite_code,status').in('id',ids);
+      if(error)throw error;
+      memberGames=data||[];
+    }
+    const byId=new Map([...memberGames,...(organized||[])].map(g=>[g.id,g]));
+    const games=[...byId.values()].sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at));
+    section.classList.remove('hidden');
+    list.replaceChildren();
+    if(!games.length){list.textContent='Nessuna partita associata a questo account.';return;}
+    for(const game of games){
+      const item=document.createElement('div');
+      item.className='item';
+      const title=document.createElement('strong');
+      title.textContent=game.title;
+      const detail=document.createElement('p');
+      detail.className='note';
+      detail.textContent=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',dateStyle:'medium',timeStyle:'short'}).format(new Date(game.scheduled_at))+' · '+game.status;
+      const button=document.createElement('button');
+      button.className='btn outline';
+      button.type='button';
+      button.textContent='Apri questa partita';
+      button.addEventListener('click',()=>{
+        const dateTime=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(game.scheduled_at));
+        const current=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+        const same=current.game_id===game.id;
+        const membership=(memberships||[]).find(m=>m.game_id===game.id);
+        const next={...current,game_id:game.id,game:game.title,
+          date:dateTime.slice(0,10),time:dateTime.slice(11,16),
+          invite_code:game.invite_code||'',name:membership?.display_name||current.name||'',
+          picks:same?current.picks:null};
+        localStorage.setItem('ti-demo',JSON.stringify(next));
+        Object.assign(stored,next);
+        confirmedGameId=null;
+        update();restoreOnlineGame();go('matches');
+        loadGameStatus();loadPlayerCount();loadMyConfirmationStatus();
+      });
+      item.append(title,detail,button);
+      list.append(item);
+    }
+  }catch(error){
+    section.classList.remove('hidden');
+    list.textContent='Impossibile caricare le partite: '+error.message;
+  }
+}
+$('refresh-my-games').addEventListener('click',loadMyOnlineGames);
 const AUTH_REDIRECT = 'https://8590piu3.github.io/TWI-Secret-Factions/';
 async function refreshAccountStatus(){
   const status=$('account-status');
@@ -898,11 +961,11 @@ $('account-login').addEventListener('click',async()=>{
 });
 supabase.auth.onAuthStateChange((event)=>{
   if(event==='SIGNED_IN'||event==='USER_UPDATED'){
-    window.setTimeout(()=>{refreshAccountStatus();},0);
+    window.setTimeout(()=>{refreshAccountStatus();loadMyOnlineGames();},0);
   }
 });
 
-update();go('home');loadGameStatus();
+update();go('home');loadGameStatus();loadMyOnlineGames();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', async () => {
     try {
