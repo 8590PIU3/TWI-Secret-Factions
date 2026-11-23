@@ -72,7 +72,7 @@ if (screen === 'pick') {
 }
 
 if (screen === 'home') {
-  loadMyRevealedFaction();
+  refreshHomeGameState();
 }
 
 if (screen === 'notifications') {
@@ -710,6 +710,27 @@ async function loadPlayerCount() {
 
 
 
+async function refreshHomeGameState(){
+  const el=$('home-game-status');
+  const selected=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+  if(!selected.game_id){if(el)el.textContent='Nessuna partita selezionata';return;}
+  try{
+    const {data:game,error}=await supabase.from('games').select('title,status,scheduled_at').eq('id',selected.game_id).single();
+    if(error)throw error;
+    if(JSON.parse(localStorage.getItem('ti-demo')||'{}').game_id!==selected.game_id)return;
+    const when=new Intl.DateTimeFormat('it-IT',{timeZone:'Europe/Rome',dateStyle:'medium',timeStyle:'short'}).format(new Date(game.scheduled_at));
+    if(el)el.textContent=({open:'Iscrizioni aperte',locked:'Fazioni assegnate',revealed:'Assegnazioni completate'})[game.status]+' · '+when;
+    $('match-date').textContent='Partita: '+when;
+    const parts=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(game.scheduled_at));
+    const latest=JSON.parse(localStorage.getItem('ti-demo')||'{}');
+    if(latest.game_id===selected.game_id){
+      latest.date=parts.slice(0,10);latest.time=parts.slice(11,16);latest.game=game.title;
+      localStorage.setItem('ti-demo',JSON.stringify(latest));Object.assign(stored,latest);
+    }
+    await loadMyRevealedFaction();
+  }catch(error){if(el)el.textContent='Impossibile aggiornare lo stato: '+error.message;}
+}
+
 async function loadMyRevealedFaction() {
   const factionElement = $('my-faction');
   const stateElement = $('faction-state');
@@ -1292,3 +1313,7 @@ if ('serviceWorker' in navigator) {
     }
   });
 }
+
+// Sincronizza i dati di tutti i partecipanti quando tornano nell'app.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden && !$('home').classList.contains('hidden'))refreshHomeGameState();});
+window.addEventListener('focus',()=>{if(!$('home').classList.contains('hidden'))refreshHomeGameState();});
